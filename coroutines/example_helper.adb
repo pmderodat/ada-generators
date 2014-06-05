@@ -4,19 +4,21 @@ with Coroutines; use Coroutines;
 
 package body Example_Helper is
 
-   procedure C1_Callee (C : in out Coroutines.Coroutine) is
+   type My_Coroutine is new Coroutines.Coroutine with null record;
+
+   procedure Run (C : in out My_Coroutine) is
    begin
       Put_Line ("Hello 1/2 from coroutine");
       Main_Coroutine.Switch;
       Put_Line ("Hello 2/2 from coroutine");
       Put_Line ("Bye!");
       raise Program_Error;
-   end C1_Callee;
+   end Run;
 
    procedure Main is
-      C1 : Coroutines.Coroutine;
+      C1 : My_Coroutine;
    begin
-      C1.Spawn (C1_Callee'Access);
+      C1.Spawn;
       Put_Line ("Hello 1/3 from main");
       C1.Switch;
       Put_Line ("Hello 2/3 from main");

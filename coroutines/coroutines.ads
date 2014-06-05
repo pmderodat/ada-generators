@@ -7,19 +7,15 @@ use type System.Storage_Elements.Storage_Offset;
 
 package Coroutines is
 
-   type Coroutine is tagged limited private;
-   type Coroutine_Access is access all Coroutine;
+   type Coroutine is abstract tagged limited private;
+   type Coroutine_Access is access all Coroutine'Class;
 
    procedure Initialize (C : in out Coroutine);
    procedure Finalize (C : in out Coroutine);
    --  These two get automatically called thanks to controlled objects
 
-   type Coroutine_Callee is access procedure (C : in out Coroutine);
-   --  The kind of procedure a coroutine can start with
-
    procedure Spawn
      (C          : in out Coroutine;
-      Callee     : Coroutine_Callee;
       Stack_Size : System.Storage_Elements.Storage_Offset := 2**16);
    --  Spawn a coroutine and initialize it to call Callee. Note that the Switch
    --  primivite has to be invoked so that the execution actually starts. In
@@ -35,6 +31,9 @@ package Coroutines is
    --  Kill C. An exception is raised in it, then it is cleaned. The main
    --  coroutine cannot be killed, and it is invalid to kill a coroutine
    --  twice in a row.
+
+   procedure Run (C : in out Coroutine) is abstract;
+   --  User code to run inside a coroutine
 
    function Current_Coroutine return Coroutine_Access;
    --  Return a reference to the coroutine that is currently running
@@ -62,7 +61,8 @@ private
    --  When context switching from one coroutine to another, this is used to
    --  save/restore the state of a coroutine.
 
-   type Coroutine is new Ada.Finalization.Limited_Controlled with record
+   type Coroutine is abstract new Ada.Finalization.Limited_Controlled
+     with record
       Stack     : Stack_Access;
       Registers : Register_Base;
       Is_Main   : Boolean;

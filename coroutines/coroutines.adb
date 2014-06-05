@@ -9,15 +9,36 @@ with Ada.Exceptions.Is_Null_Occurrence;
 
 package body Coroutines is
 
-   Abort_Coroutine : exception;
+   --------------------
+   -- Main coroutine --
+   --------------------
 
-   Main_Coroutine_Obj : aliased Coroutine :=
+   type Main_Coroutine_Type is new Coroutine with null record;
+
+   procedure Run (C : in out Main_Coroutine_Type);
+   --  The main coroutine... is never started the usual way: it is the
+   --  "regular" coroutine. Thus, this Run method will never be used.
+
+   ---------
+   -- Run --
+   ---------
+
+   procedure Run (C : in out Main_Coroutine_Type) is
+   begin
+      --  This is not supposed to be run: see the above comment
+
+      raise Program_Error;
+   end Run;
+
+   Main_Coroutine_Obj : aliased Main_Coroutine_Type :=
      (Ada.Finalization.Limited_Controlled with
       Stack     => null,
       Registers => <>,
       Is_Main   => True,
       To_Clean  => False,
       Exc       => <>);
+
+   Abort_Coroutine : exception;
 
    Current_Coroutine_Ptr : Coroutine_Access := Main_Coroutine_Obj'Access;
    pragma Export (C, Current_Coroutine_Ptr, "coroutines__current");
@@ -28,16 +49,15 @@ package body Coroutines is
    procedure Switch_Helper (C : System.Address);
    pragma Import (C, Switch_Helper, "coroutines__switch_helper");
 
-   function "=" (Left, Right : Coroutine) return Boolean is
+   function "=" (Left, Right : Coroutine'Class) return Boolean is
      (Left'Address = Right'Address);
 
-   procedure Top_Wrapper
-     (C      : in out Coroutine;
-      Callee : Coroutine_Callee);
+   procedure Top_Wrapper (C : in out Coroutine'Class);
+   --  Coroutines landing pad: first subprogram executed in a coroutine
 
-   procedure Coroutine_Wrapper
-     (C      : in out Coroutine;
-      Callee : Coroutine_Callee);
+   procedure Coroutine_Wrapper (C : in out Coroutine'Class);
+   --  Wrapper for coroutines execution: catch exceptions, manage state
+   --  finalization.
 
    procedure Reraise_And_Clean (Exc : in out Exception_Occurrence);
 
@@ -68,7 +88,6 @@ package body Coroutines is
 
    procedure Spawn
      (C          : in out Coroutine;
-      Callee     : Coroutine_Callee;
       Stack_Size : System.Storage_Elements.Storage_Offset := 2**16)
    is
       use System.Storage_Elements;
@@ -126,10 +145,9 @@ package body Coroutines is
       C.Registers (RSP) := C.Registers (RBP);
       Push (To_Integer (Top_Wrapper'Address));
 
-      --  Set up Top_Wrapper's arguments
+      --  Set up Top_Wrapper's argument
 
       C.Registers (RDI) := To_Integer (C'Address);
-      C.Registers (RSI) := To_Integer (Callee.all'Address);
 
       --  The coroutine is now ready to switch to. Let the user do that
       --  whenever he wants.
@@ -219,26 +237,22 @@ package body Coroutines is
    -- Top_Wrapper --
    -----------------
 
-   procedure Top_Wrapper
-     (C      : in out Coroutine;
-      Callee : Coroutine_Callee) is
+   procedure Top_Wrapper (C : in out Coroutine'Class) is
    begin
-      Coroutine_Wrapper (C, Callee);
+      Coroutine_Wrapper (C);
    end Top_Wrapper;
 
    -----------------------
    -- Coroutine_Wrapper --
    -----------------------
 
-   procedure Coroutine_Wrapper
-     (C      : in out Coroutine;
-      Callee : Coroutine_Callee) is
+   procedure Coroutine_Wrapper (C : in out Coroutine'Class) is
    begin
       --  When leaving Callee, the coroutine is about to abort, so the
       --  coroutine we will be switching to must clean this coroutine.
 
       begin
-         Callee (C);
+         C.Run;
       exception
          when Abort_Coroutine =>
             C.To_Clean := True;
