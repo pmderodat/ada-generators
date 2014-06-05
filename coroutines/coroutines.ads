@@ -7,11 +7,12 @@ use type System.Storage_Elements.Storage_Offset;
 
 package Coroutines is
 
-   type Coroutine is abstract tagged limited private;
+   type Coroutine is abstract new Ada.Finalization.Limited_Controlled
+   with private;
    type Coroutine_Access is access all Coroutine'Class;
 
-   procedure Initialize (C : in out Coroutine);
-   procedure Finalize (C : in out Coroutine);
+   overriding procedure Initialize (C : in out Coroutine);
+   overriding procedure Finalize (C : in out Coroutine);
    --  These two get automatically called thanks to controlled objects
 
    procedure Spawn
