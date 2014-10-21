@@ -1,3 +1,6 @@
+--  Interface for iterations (because I'm too lazy to implement an Ada 2012
+--  iterator...).
+
 generic
    type T (<>) is private;
 package Iterators is
