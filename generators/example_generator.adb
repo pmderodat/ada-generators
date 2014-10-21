@@ -43,4 +43,11 @@ begin
          exit when I >= 10;
       end;
    end loop;
+
+   -- If we implemented a read Ada 2012 iterator, we could write:
+
+   -- for I of C loop
+   --    Put_Line (Integer'Image (I));
+   --    exit when I >= 10;
+   -- end loop;
 end Example_Generator;
