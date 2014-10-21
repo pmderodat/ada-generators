@@ -10,11 +10,6 @@ generic
    type T is private;
 package Generators is
 
-   type State_Type is
-      (Waiting,
-       Yielding,
-       Returning);
-
    package T_Iterators is new Iterators (T);
 
    --  A generator is a coroutine that can be "iterated"
@@ -40,6 +35,11 @@ package Generators is
    procedure Generate (I : in out Generator) is abstract;
 
 private
+
+   type State_Type is
+     (Waiting,
+      Yielding,
+      Returning);
 
    type Generator is abstract new Coroutines.Coroutine
      and T_Iterators.Iterator
