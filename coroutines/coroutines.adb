@@ -39,6 +39,8 @@ package body Coroutines is
       Exc       => <>);
 
    Abort_Coroutine : exception;
+   --  Users should not be able to stop coroutine abortion. Use
+   --  Standard'Abort_Signal instead???
 
    Current_Coroutine_Ptr : Coroutine_Access := Main_Coroutine_Obj'Access;
    pragma Export (C, Current_Coroutine_Ptr, "coroutines__current");
