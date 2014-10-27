@@ -95,4 +95,53 @@ package body Generators is
       I.Caller.Switch;
    end Yield;
 
+   -----------
+   -- First --
+   -----------
+
+   function First (I : in out Generator) return Cursor_Type is
+   begin
+      return (Has_Element => I.Has_Next);
+   end First;
+
+   ----------
+   -- Next --
+   ----------
+
+   function Next (I : in out Generator; C : Cursor_Type) return Cursor_Type is
+   begin
+      case I.State is
+         when Waiting =>
+            null;
+         when Yielding =>
+            I.State := Waiting;
+         when Returning =>
+            raise Program_Error with "Unreachable state";
+      end case;
+      return I.First;
+   end Next;
+
+   -----------------
+   -- Has_Element --
+   -----------------
+
+   function Has_Element (I : in out Generator; C : Cursor_Type) return Boolean
+   is
+   begin
+      return C.Has_Element;
+   end Has_Element;
+
+   -------------
+   -- Element --
+   -------------
+
+   function Element (I : in out Generator; C : Cursor_Type) return T is
+   begin
+      if C.Has_Element then
+         return I.Yield_Value;
+      else
+         raise Program_Error with "No yielded element";
+      end if;
+   end Element;
+
 end Generators;

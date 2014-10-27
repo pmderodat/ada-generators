@@ -31,23 +31,8 @@ procedure Example_Generator is
       Start => 1);
 
 begin
-   loop
-      if not C.Has_Next then
-         exit;
-      end if;
-
-      declare
-         I : constant Integer := C.Next;
-      begin
-         Put_Line (Integer'Image (I));
-         exit when I >= 10;
-      end;
+   for I of Int_Generators.Iterable (C) loop
+      Put_Line (Integer'Image (I));
+      exit when I >= 10;
    end loop;
-
-   -- If we implemented a read Ada 2012 iterator, we could write:
-
-   -- for I of C loop
-   --    Put_Line (Integer'Image (I));
-   --    exit when I >= 10;
-   -- end loop;
 end Example_Generator;

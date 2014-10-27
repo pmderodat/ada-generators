@@ -10,13 +10,17 @@ generic
    type T is private;
 package Generators is
 
-   package T_Iterators is new Iterators (T);
+   --  A generator is a coroutine that can be iterated
 
-   --  A generator is a coroutine that can be "iterated"
-
+   type Generator;
+   type Generator_Access is access all Generator;
+   type Cursor_Type is record
+      Has_Element : Boolean;
+   end record;
+   package T_Iterators is new Iterators (T, Cursor_Type);
+   subtype Iterable is T_Iterators.Iterator'Class;
    type Generator is abstract new Coroutines.Coroutine
-     and T_Iterators.Iterator
-   with private;
+     and T_Iterators.Iterator with private;
 
    --  Override primitives required to implement a Coroutine
 
@@ -28,6 +32,15 @@ package Generators is
 
    function Has_Next (I : in out Generator) return Boolean;
    function Next (I : in out Generator) return T;
+
+   overriding function First (I : in out Generator) return Cursor_Type;
+   overriding function Next (I : in out Generator; C : Cursor_Type)
+                             return Cursor_Type;
+   overriding function Has_Element (I : in out Generator; C : Cursor_Type)
+                                    return Boolean;
+   overriding function Element (I : in out Generator; C : Cursor_Type)
+                                return T;
+
    procedure Yield (I : in out Generator; Value : T);
 
    --  Users only have to override the following primitive
@@ -42,8 +55,7 @@ private
       Returning);
 
    type Generator is abstract new Coroutines.Coroutine
-     and T_Iterators.Iterator
-   with record
+     and T_Iterators.Iterator with record
       Caller      : Coroutines.Coroutine_Access;
       State       : State_Type;
       Yield_Value : T;
