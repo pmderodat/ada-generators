@@ -45,27 +45,9 @@ package Coroutines is
 
 private
 
-   type Stack_Type is new System.Storage_Elements.Storage_Array;
-   for Stack_Type'Alignment use 8;
-   type Stack_Access is access Stack_Type;
-   --  Type used to allocate a coroutine execution stack
-
-   procedure Free is new Ada.Unchecked_Deallocation
-     (Stack_Type, Stack_Access);
-
-   type Register_Type is
-     (RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
-      R8,  R9,  R10, R11, R12, R13, R14, R15);
-
-   type Register_Base is array (Register_Type)
-     of System.Storage_Elements.Integer_Address;
-   --  When context switching from one coroutine to another, this is used to
-   --  save/restore the state of a coroutine.
-
    type Coroutine is abstract new Ada.Finalization.Limited_Controlled
      with record
-      Stack     : Stack_Access;
-      Registers : Register_Base;
+      Data      : System.Address;
       Is_Main   : Boolean;
       To_Clean  : Boolean;
       Exc       : Ada.Exceptions.Exception_Occurrence;

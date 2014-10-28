@@ -1,6 +1,21 @@
+with "pcl.gpr";
+
 project Coroutines is
+   type Coroutine_Kind is ("bare", "pcl");
+   Coroutine : Coroutine_Kind := External ("COROUTINES", "bare");
+
    for Source_Dirs use (".");
    for Object_Dir use "obj";
    for Exec_Dir use "obj";
    for Languages use ("Ada", "Asm");
+
+   package Naming is
+      case Coroutine is
+         when "bare" =>
+            for Implementation ("Coroutines") use "coroutines__bare.adb";
+         when "pcl" =>
+            for Implementation ("Coroutines") use "coroutines__pcl.adb";
+      end case;
+   end Naming;
+
 end Coroutines;

@@ -21,11 +21,16 @@ coroutines__switch_helper:
 	movq	%rdi, coroutines__previous(%rip)
 
 	# Now, make rdi contain a pointer to current coroutine's register base.
-	lea	0x18(%rdi), %rdi
+	# First get the address of the coroutine data record in RDI.
+	movq	0x08(%rdi), %rdi
+	lea	0x10(%rdi), %rdi
 
 	#
 	# Save registers to the coroutine we are switching from.
 	#
+
+	# Some registers are caller-saved, so we do not need to save them.
+	# Anyway...
 
 	movq	%rax, 0x00(%rdi)
 	movq	%rcx, 0x08(%rdi)
@@ -53,7 +58,8 @@ coroutines__switch_helper:
 	movq	coroutines__switch_cptr(%rip), %rdi
 	movq	%rdi, coroutines__current(%rip)
 	# ... and more specifically a pointer to its register base.
-	lea	0x18(%rdi), %rdi
+	movq	0x08(%rdi), %rdi
+	lea	0x10(%rdi), %rdi
 
 	#
 	# Now, get registers from the coroutine we are switching to.

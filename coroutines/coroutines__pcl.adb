@@ -1,13 +1,25 @@
 with Ada.Exceptions; use Ada.Exceptions;
+with Ada.Exceptions.Is_Null_Occurrence;
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Unchecked_Conversion;
 
 with Interfaces;
 
 with System; use System;
-with Ada.Exceptions.Is_Null_Occurrence;
+with System.Address_To_Access_Conversions;
+
+with PCL; use PCL;
 
 package body Coroutines is
+
+   function Convert is new Ada.Unchecked_Conversion
+     (System.Address, PCL.Coroutine);
+
+   function Convert is new Ada.Unchecked_Conversion
+     (PCL.Coroutine, System.Address);
+
+   package Conversions is new  System.Address_To_Access_Conversions
+     (Coroutine'Class);
 
    --------------------
    -- Main coroutine --
@@ -32,34 +44,23 @@ package body Coroutines is
 
    Main_Coroutine_Obj : aliased Main_Coroutine_Type :=
      (Ada.Finalization.Limited_Controlled with
-      Stack     => null,
-      Registers => <>,
+      Data      => Convert (PCL.Current),
       Is_Main   => True,
       To_Clean  => False,
       Exc       => <>);
+   Previous_Coroutine_Ptr : Coroutine_Access := Main_Coroutine_Obj'Access;
 
    Abort_Coroutine : exception;
    --  Users should not be able to stop coroutine abortion. Use
    --  Standard'Abort_Signal instead???
 
-   Current_Coroutine_Ptr : Coroutine_Access := Main_Coroutine_Obj'Access;
-   pragma Export (C, Current_Coroutine_Ptr, "coroutines__current");
-
-   Previous_Coroutine_Ptr : Coroutine_Access := null;
-   pragma Export (C, Previous_Coroutine_Ptr, "coroutines__previous");
-
-   procedure Switch_Helper (C : System.Address);
-   pragma Import (C, Switch_Helper, "coroutines__switch_helper");
-
    function "=" (Left, Right : Coroutine'Class) return Boolean is
      (Left'Address = Right'Address);
 
-   procedure Top_Wrapper (C : in out Coroutine'Class);
-   --  Coroutines landing pad: first subprogram executed in a coroutine
-
-   procedure Coroutine_Wrapper (C : in out Coroutine'Class);
-   --  Wrapper for coroutines execution: catch exceptions, manage state
-   --  finalization.
+   procedure Coroutine_Wrapper (Data : System.Address)
+     with Convention => C;
+   --  Wrapper for coroutines execution: landing pad, catch exceptions, manage
+   --  state finalization.
 
    procedure Reraise_And_Clean (Exc : in out Exception_Occurrence);
 
@@ -69,7 +70,10 @@ package body Coroutines is
 
    procedure Initialize (C : in out Coroutine) is
    begin
-      C.Stack := null;
+      C.Data := Null_Address;
+      C.Is_Main := False;
+      C.To_Clean := False;
+      Save_Occurrence (C.Exc, Null_Occurrence);
    end Initialize;
 
    --------------
@@ -78,9 +82,8 @@ package body Coroutines is
 
    procedure Finalize (C : in out Coroutine) is
    begin
-      if C /= Main_Coroutine.all and then C.Stack /= null then
+      if C /= Main_Coroutine.all and then C.Data /= Null_Address then
          C.Kill;
-         Free (C.Stack);
       end if;
    end Finalize;
 
@@ -92,69 +95,36 @@ package body Coroutines is
      (C          : in out Coroutine;
       Stack_Size : System.Storage_Elements.Storage_Offset := 2**16)
    is
-      use System.Storage_Elements;
-      use Interfaces;
+      procedure Discard (A : System.Address);
 
-      type Stack_Pointer is access all Storage_Element;
-      type Word_Access is access all Integer_Address;
+      -------------
+      -- Discard --
+      -------------
 
-      function Convert is new Ada.Unchecked_Conversion
-        (Stack_Pointer, Word_Access);
-
-      Word_Size          : constant Storage_Offset :=
-        System.Word_Size / System.Storage_Unit;
-      Stack_Aligned_Size : constant Storage_Offset :=
-        Stack_Size - Stack_Size mod Word_Size;
-
-      Stack_Top : constant Storage_Offset :=
-        Stack_Aligned_Size - Word_Size + 1;
-      Cursor    : Storage_Offset := Stack_Top;
-      --  On x86_64 systems, the stack goes to lower addresses: start pushing
-      --  elements at the end of it.
-
-      procedure Push (Value : Integer_Address);
-
-      procedure Push (Value : Integer_Address) is
-         Ptr : constant Stack_Pointer := C.Stack (Cursor)'Access;
+      procedure Discard (A : System.Address) is
       begin
-         Convert (Ptr).all := Value;
-         Cursor := Cursor - Word_Size;
-      end Push;
+         null;
+      end Discard;
 
+      Coro : PCL.Coroutine;
    begin
       if C.Alive then
          raise Program_Error with "Coroutine already running";
       end if;
 
+      Coro := Create
+        (Func  => Coroutine_Wrapper'Access,
+         Data  => C'Address,
+         Stack => Null_Address,
+         Size  => Integer (Stack_Size));
+      if Coro = Null_Coroutine then
+         --  TODO: check errno, etc.
+         raise Program_Error with "PCL.Create failed";
+      end if;
+      C.Data := Convert (Coro);
       C.Is_Main := False;
       C.To_Clean := False;
       Save_Occurrence (C.Exc, Null_Occurrence);
-
-      C.Registers := (others => 0);
-
-      --  Set up the stack
-
-      C.Stack := new Stack_Type (1 .. Stack_Aligned_Size);
-
-      --  This pattern will help figuring out what is happening when debugging
-
-      Push (16#01020304_05060708#);
-
-      --  We want the switch subprogram to return to the top wrapper in order
-      --  to properly start execution.
-
-      C.Registers (RBP) := To_Integer (C.Stack (Cursor)'Address);
-      C.Registers (RSP) := C.Registers (RBP);
-      Push (To_Integer (Top_Wrapper'Address));
-
-      --  Set up Top_Wrapper's argument
-
-      C.Registers (RDI) := To_Integer (C'Address);
-
-      --  The coroutine is now ready to switch to. Let the user do that
-      --  whenever he wants.
-
-      C.Registers (RAX) := 16#ABABABAB_ABABABAB#;
    end Spawn;
 
    ------------
@@ -163,16 +133,21 @@ package body Coroutines is
 
    procedure Switch (C : in out Coroutine) is
    begin
-      if C = Current_Coroutine.all then
+      if C.Data = Current_Coroutine.Data then
          raise Program_Error with "Trying to switch in the same coroutine";
       elsif not C.Alive then
          raise Program_Error with "Trying to switch to a dead coroutine";
       end if;
 
-      Switch_Helper (C'Address);
+      --  From the next coroutine to run's point of view, the current coroutine
+      --  is what Previous_Coroutine_Ptr shall be.
+
+      Previous_Coroutine_Ptr := Current_Coroutine;
+      Call (Convert (C.Data));
 
       if Previous_Coroutine_Ptr.To_Clean then
-         Free (Previous_Coroutine_Ptr.Stack);
+         Delete (Convert (Previous_Coroutine_Ptr.Data));
+         Previous_Coroutine_Ptr.Data := Null_Address;
          if not Is_Null_Occurrence (Previous_Coroutine_Ptr.Exc) then
             pragma Assert (Is_Null_Occurrence (C.Exc));
             Reraise_And_Clean (Previous_Coroutine_Ptr.Exc);
@@ -190,7 +165,7 @@ package body Coroutines is
 
    function Alive (C : in out Coroutine) return Boolean is
    begin
-      return C = Main_Coroutine.all or else C.Stack /= null;
+      return C.Data /= Null_Address;
    end Alive;
 
    ----------
@@ -212,9 +187,15 @@ package body Coroutines is
          when Exc : Abort_Coroutine =>
             Save_Occurrence (C.Exc, Exc);
       end;
+
+      --  The following will switch to C, raise an exception that will unwind
+      --  its stack. Then, C's Coroutine_Wrapper instance will switch back to
+      --  the current coroutine.
+
       C.Switch;
 
-      Free (C.Stack);
+      --  When coming back from C, the Switch routine is supposed to clean
+      --  *and* delete C's PCL coroutine, so we are done.
    end Kill;
 
    -----------------------
@@ -222,8 +203,15 @@ package body Coroutines is
    -----------------------
 
    function Current_Coroutine return Coroutine_Access is
+      Current_Coroutine : constant PCL.Coroutine := Current;
+      function Convert is new Ada.Unchecked_Conversion
+        (System.Address, Coroutine_Access);
    begin
-      return Current_Coroutine_Ptr;
+      if Current_Coroutine = Convert (Main_Coroutine_Obj.Data) then
+         return Main_Coroutine_Obj'Access;
+      else
+         return Convert (Get_Data (Current_Coroutine));
+      end if;
    end Current_Coroutine;
 
    --------------------
@@ -235,20 +223,15 @@ package body Coroutines is
       return Main_Coroutine_Obj'Access;
    end Main_Coroutine;
 
-   -----------------
-   -- Top_Wrapper --
-   -----------------
-
-   procedure Top_Wrapper (C : in out Coroutine'Class) is
-   begin
-      Coroutine_Wrapper (C);
-   end Top_Wrapper;
-
    -----------------------
    -- Coroutine_Wrapper --
    -----------------------
 
-   procedure Coroutine_Wrapper (C : in out Coroutine'Class) is
+   procedure Coroutine_Wrapper (Data : System.Address) is
+      package Conversions is new  System.Address_To_Access_Conversions
+        (Coroutine'Class);
+      C : access Coroutine'Class := Conversions.To_Pointer (Data);
+
    begin
       --  When leaving Callee, the coroutine is about to abort, so the
       --  coroutine we will be switching to must clean this coroutine.
