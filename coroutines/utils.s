@@ -8,7 +8,7 @@ coroutines__switch_cptr:
 	.zero	8
 
 	.text
-	.align	2
+	.align	32
 	.globl	coroutines__switch_helper
 	.type	coroutines__switch_helper, @function
 coroutines__switch_helper:
