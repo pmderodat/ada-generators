@@ -5,13 +5,13 @@ package body Generators is
    ----------------
 
    overriding
-   procedure Initialize (I : in out Generator) is
+   procedure Initialize (G : in out Generator) is
       use System.Storage_Elements;
    begin
-      Coroutines.Initialize (Coroutines.Coroutine (I));
-      I.Caller := Coroutines.Current_Coroutine;
-      I.State := Waiting;
-      I.Spawn;
+      Coroutines.Initialize (Coroutines.Coroutine (G));
+      G.Caller := Coroutines.Current_Coroutine;
+      G.State := Waiting;
+      G.Spawn;
    end Initialize;
 
    --------------
@@ -19,10 +19,10 @@ package body Generators is
    --------------
 
    overriding
-   procedure Finalize (I : in out Generator) is
+   procedure Finalize (G : in out Generator) is
    begin
-      Coroutines.Finalize (Coroutines.Coroutine (I));
-      I.State := Returning;
+      Coroutines.Finalize (Coroutines.Coroutine (G));
+      G.State := Returning;
    end Finalize;
 
    ---------
@@ -30,26 +30,26 @@ package body Generators is
    ---------
 
    overriding
-   procedure Run (I : in out Generator) is
-      I_Class : Generator'Class renames Generator'Class (I);
+   procedure Run (G : in out Generator) is
+      G_Class : Generator'Class renames Generator'Class (G);
    begin
       begin
-         I_Class.Generate;
+         G_Class.Generate;
       exception
          when others =>
-            I.State := Returning;
+            G.State := Returning;
             raise;
       end;
-      I.State := Returning;
+      G.State := Returning;
    end Run;
 
    --------------
    -- Has_Next --
    --------------
 
-   function Has_Next (I : in out Generator) return Boolean is
+   function Has_Next (G : in out Generator) return Boolean is
    begin
-      case I.State is
+      case G.State is
          when Waiting =>
             null;
          when Yielding =>
@@ -58,9 +58,9 @@ package body Generators is
             return False;
       end case;
 
-      I.Switch;
+      G.Switch;
 
-      case I.State is
+      case G.State is
          when Waiting =>
             raise Program_Error with "Unreachable state";
          when Yielding =>
@@ -74,14 +74,14 @@ package body Generators is
    -- Next --
    ----------
 
-   function Next (I : in out Generator) return T is
+   function Next (G : in out Generator) return T is
    begin
-      case I.State is
+      case G.State is
          when Waiting | Returning =>
             raise Program_Error with "Unreachable state";
          when Yielding =>
-            I.State := Waiting;
-            return I.Yield_Value;
+            G.State := Waiting;
+            return G.Yield_Value;
       end case;
    end Next;
 
@@ -89,18 +89,18 @@ package body Generators is
    -- Yield --
    -----------
 
-   procedure Yield (I : in out Generator; Value : T) is
+   procedure Yield (G : in out Generator; Value : T) is
    begin
-      I.State := Yielding;
-      I.Yield_Value := Value;
-      I.Caller.Switch;
+      G.State := Yielding;
+      G.Yield_Value := Value;
+      G.Caller.Switch;
    end Yield;
 
    -----------
    -- First --
    -----------
 
-   function First (I : in out Generator) return Cursor_Type is
+   function First (G : in out Generator) return Cursor_Type is
    begin
       return (others => <>);
    end First;
@@ -109,40 +109,40 @@ package body Generators is
    -- Next --
    ----------
 
-   function Next (I : in out Generator; C : Cursor_Type) return Cursor_Type is
+   function Next (G : in out Generator; C : Cursor_Type) return Cursor_Type is
    begin
-      case I.State is
+      case G.State is
          when Waiting =>
             null;
          when Yielding =>
-            I.State := Waiting;
+            G.State := Waiting;
          when Returning =>
             raise Program_Error with "Unreachable state";
       end case;
-      return I.First;
+      return G.First;
    end Next;
 
    -----------------
    -- Has_Element --
    -----------------
 
-   function Has_Element (I : in out Generator; C : Cursor_Type) return Boolean
+   function Has_Element (G : in out Generator; C : Cursor_Type) return Boolean
    is
    begin
-      return I.Has_Next;
+      return G.Has_Next;
    end Has_Element;
 
    -------------
    -- Element --
    -------------
 
-   function Element (I : in out Generator; C : Cursor_Type) return T is
+   function Element (G : in out Generator; C : Cursor_Type) return T is
    begin
-      case I.State is
+      case G.State is
          when Waiting | Returning =>
             raise Program_Error with "Unreachable state";
          when Yielding =>
-            return I.Yield_Value;
+            return G.Yield_Value;
       end case;
    end Element;
 
