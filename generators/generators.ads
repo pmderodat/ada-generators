@@ -14,9 +14,7 @@ package Generators is
 
    type Generator;
    type Generator_Access is access all Generator;
-   type Cursor_Type is record
-      Has_Element : Boolean;
-   end record;
+   type Cursor_Type is null record;
    package T_Iterators is new Iterators (T, Cursor_Type);
    subtype Iterable is T_Iterators.Iterator'Class;
    type Generator is abstract new Coroutines.Coroutine

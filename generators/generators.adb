@@ -101,7 +101,7 @@ package body Generators is
 
    function First (I : in out Generator) return Cursor_Type is
    begin
-      return (Has_Element => I.Has_Next);
+      return (others => <>);
    end First;
 
    ----------
@@ -128,7 +128,7 @@ package body Generators is
    function Has_Element (I : in out Generator; C : Cursor_Type) return Boolean
    is
    begin
-      return C.Has_Element;
+      return I.Has_Next;
    end Has_Element;
 
    -------------
@@ -137,11 +137,12 @@ package body Generators is
 
    function Element (I : in out Generator; C : Cursor_Type) return T is
    begin
-      if C.Has_Element then
-         return I.Yield_Value;
-      else
-         raise Program_Error with "No yielded element";
-      end if;
+      case I.State is
+         when Waiting | Returning =>
+            raise Program_Error with "Unreachable state";
+         when Yielding =>
+            return I.Yield_Value;
+      end case;
    end Element;
 
 end Generators;
