@@ -44,10 +44,11 @@ package body Coroutines is
 
    Main_Coroutine_Obj : aliased Main_Coroutine_Type :=
      (Ada.Finalization.Limited_Controlled with
-      Data      => Convert (PCL.Current),
-      Is_Main   => True,
-      To_Clean  => False,
-      Exc       => <>);
+      Data       => Convert (PCL.Current),
+      Is_Main    => True,
+      Is_Started => True,
+      To_Clean   => False,
+      Exc        => <>);
    Previous_Coroutine_Ptr : Coroutine_Access := Main_Coroutine_Obj'Access;
 
    Abort_Coroutine : exception;
@@ -64,6 +65,22 @@ package body Coroutines is
 
    procedure Reraise_And_Clean (Exc : in out Exception_Occurrence);
 
+   procedure Reset (C : in out Coroutine);
+
+   -----------
+   -- Reset --
+   -----------
+
+   procedure Reset (C : in out Coroutine) is
+   begin
+      if C.Data /= Null_Address then
+         Delete (Convert (C.Data));
+         C.Data := Null_Address;
+      end if;
+      C.Is_Started := False;
+      C.To_Clean := False;
+   end Reset;
+
    ----------------
    -- Initialize --
    ----------------
@@ -73,6 +90,7 @@ package body Coroutines is
       C.Data := Null_Address;
       C.Is_Main := False;
       C.To_Clean := False;
+      C.Is_Started := False;
       Save_Occurrence (C.Exc, Null_Occurrence);
    end Initialize;
 
@@ -146,8 +164,7 @@ package body Coroutines is
       Call (Convert (C.Data));
 
       if Previous_Coroutine_Ptr.To_Clean then
-         Delete (Convert (Previous_Coroutine_Ptr.Data));
-         Previous_Coroutine_Ptr.Data := Null_Address;
+         Reset (C);
          if not Is_Null_Occurrence (Previous_Coroutine_Ptr.Exc) then
             pragma Assert (Is_Null_Occurrence (C.Exc));
             Reraise_And_Clean (Previous_Coroutine_Ptr.Exc);
@@ -179,6 +196,11 @@ package body Coroutines is
 
       elsif not C.Alive then
          raise Program_Error with "Coroutine already killed";
+      end if;
+
+      if not C.Is_Started then
+         Reset (C);
+         return;
       end if;
 
       begin
@@ -231,8 +253,11 @@ package body Coroutines is
       package Conversions is new  System.Address_To_Access_Conversions
         (Coroutine'Class);
       C : access Coroutine'Class := Conversions.To_Pointer (Data);
+      Switch_To_Previous : Boolean := False;
 
    begin
+      C.Is_Started := True;
+
       --  When leaving Callee, the coroutine is about to abort, so the
       --  coroutine we will be switching to must clean this coroutine.
 
@@ -240,17 +265,19 @@ package body Coroutines is
          C.Run;
       exception
          when Abort_Coroutine =>
-            C.To_Clean := True;
-            Previous_Coroutine_Ptr.Switch;
+            Switch_To_Previous := True;
 
          when Exc : others =>
             Save_Occurrence (C.Exc, Exc);
-            C.To_Clean := True;
-            Previous_Coroutine_Ptr.Switch;
+            Switch_To_Previous := True;
       end;
 
       C.To_Clean := True;
-      Main_Coroutine.Switch;
+      if Switch_To_Previous then
+         Previous_Coroutine_Ptr.Switch;
+      else
+         Main_Coroutine.Switch;
+      end if;
    end Coroutine_Wrapper;
 
    -----------------------

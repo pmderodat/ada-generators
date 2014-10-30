@@ -47,10 +47,11 @@ private
 
    type Coroutine is abstract new Ada.Finalization.Limited_Controlled
      with record
-      Data      : System.Address;
-      Is_Main   : Boolean;
-      To_Clean  : Boolean;
-      Exc       : Ada.Exceptions.Exception_Occurrence;
+      Data       : System.Address;
+      Is_Main    : Boolean;
+      Is_Started : Boolean;
+      To_Clean   : Boolean;
+      Exc        : Ada.Exceptions.Exception_Occurrence;
    end record;
 
 end Coroutines;

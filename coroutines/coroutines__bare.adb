@@ -68,10 +68,11 @@ package body Coroutines is
       Registers => <>);
    Main_Coroutine_Obj  : aliased Main_Coroutine_Type :=
      (Ada.Finalization.Limited_Controlled with
-      Data     => Main_Coroutine_Data'Address,
-      Is_Main  => True,
-      To_Clean => False,
-      Exc      => <>);
+      Data       => Main_Coroutine_Data'Address,
+      Is_Main    => True,
+      Is_Started => True,
+      To_Clean   => False,
+      Exc        => <>);
 
    Abort_Coroutine : exception;
    --  Users should not be able to stop coroutine abortion. Use
@@ -98,6 +99,21 @@ package body Coroutines is
 
    procedure Reraise_And_Clean (Exc : in out Exception_Occurrence);
 
+   procedure Reset (C : in out Coroutine);
+
+   -----------
+   -- Reset --
+   -----------
+
+   procedure Reset (C : in out Coroutine) is
+   begin
+      if Get_Data (C) /= null then
+         Free (Get_Data (C).Stack);
+      end if;
+      C.Is_Started := False;
+      C.To_Clean := False;
+   end Reset;
+
    ----------------
    -- Initialize --
    ----------------
@@ -107,6 +123,7 @@ package body Coroutines is
         new Coroutine_Data'(Stack => null, Registers => <>);
    begin
       C.Data := Conversions.To_Address (Data.all'Access);
+      C.Is_Started := False;
    end Initialize;
 
    --------------
@@ -215,7 +232,7 @@ package body Coroutines is
       Switch_Helper (C'Address);
 
       if Previous_Coroutine_Ptr.To_Clean then
-         Free (Get_Data (Coroutine (Previous_Coroutine_Ptr.all)).Stack);
+         Reset (C);
          if not Is_Null_Occurrence (Previous_Coroutine_Ptr.Exc) then
             pragma Assert (Is_Null_Occurrence (C.Exc));
             Reraise_And_Clean (Previous_Coroutine_Ptr.Exc);
@@ -247,6 +264,11 @@ package body Coroutines is
 
       elsif not C.Alive then
          raise Program_Error with "Coroutine already killed";
+      end if;
+
+      if not C.Is_Started then
+         Reset (C);
+         return;
       end if;
 
       begin
@@ -292,7 +314,11 @@ package body Coroutines is
    -----------------------
 
    procedure Coroutine_Wrapper (C : in out Coroutine'Class) is
+      Switch_To_Previous : Boolean := False;
+
    begin
+      C.Is_Started := True;
+
       --  When leaving Callee, the coroutine is about to abort, so the
       --  coroutine we will be switching to must clean this coroutine.
 
@@ -300,17 +326,19 @@ package body Coroutines is
          C.Run;
       exception
          when Abort_Coroutine =>
-            C.To_Clean := True;
-            Previous_Coroutine_Ptr.Switch;
+            Switch_To_Previous := True;
 
          when Exc : others =>
             Save_Occurrence (C.Exc, Exc);
-            C.To_Clean := True;
-            Previous_Coroutine_Ptr.Switch;
+            Switch_To_Previous := True;
       end;
 
       C.To_Clean := True;
-      Main_Coroutine.Switch;
+      if Switch_To_Previous then
+         Previous_Coroutine_Ptr.Switch;
+      else
+         Main_Coroutine.Switch;
+      end if;
    end Coroutine_Wrapper;
 
    -----------------------
