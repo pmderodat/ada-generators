@@ -17,14 +17,10 @@ package Generators is
    type Cursor_Type is null record;
    package T_Iterators is new Iterators (T, Cursor_Type);
    subtype Iterable is T_Iterators.Iterator'Class;
-   type Generator is abstract new Coroutines.Coroutine
-     and T_Iterators.Iterator with private;
+   type Generator is abstract limited new Coroutines.Coroutine with private;
 
    --  Override primitives required to implement a Coroutine
 
-   overriding procedure Initialize (I : in out Generator);
-   overriding procedure Finalize (I : in out Generator);
-   overriding procedure Run (I : in out Generator);
 
    --  Define generator primitives for users
 
@@ -58,5 +54,9 @@ private
       State       : State_Type;
       Yield_Value : T;
    end record;
+
+   overriding procedure Initialize (I : in out Generator);
+   overriding procedure Finalize (I : in out Generator);
+   overriding procedure Run (I : in out Generator);
 
 end Generators;
