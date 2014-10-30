@@ -7,6 +7,12 @@ use type System.Storage_Elements.Storage_Offset;
 
 package Coroutines is
 
+   --  This package provides support for creating coroutines.
+
+   --  Coroutines are lightweight user-land cooperative threads. This package
+   --  provides an abstract tagged type: in order to create coroutines, one has
+   --  to derive it providing a target procedure as a Run primitive.
+
    type Coroutine is abstract tagged limited private;
    type Coroutine_Access is access all Coroutine'Class;
 
@@ -43,10 +49,26 @@ private
    type Coroutine is abstract new Ada.Finalization.Limited_Controlled
      with record
       Data       : System.Address;
+      --  Coroutines back-end specific data
+
       Is_Main    : Boolean;
+      --  Is this coroutine the main one (i.e. the implicit coroutine started
+      --  along with the process).
+
       Is_Started : Boolean;
+      --  True if the coroutine has been spawned *and* switched to at least
+      --  once. False in all other cases.
+
       To_Clean   : Boolean;
+      --  Set to True when the coroutine is terminated (because of explicit
+      --  abortion, because of an exception or because of regular termination).
+      --  False otherwise. It is used by the next coroutine to know when to
+      --  clean the previous one. The flag to False is reset once cleaning
+      --  is done.
+
       Exc        : Ada.Exceptions.Exception_Occurrence;
+      --  When assigned a non-null exception occurrence, the Switch primitive
+      --  must re-raise it when resuming excution.
    end record;
 
    overriding procedure Initialize (C : in out Coroutine);

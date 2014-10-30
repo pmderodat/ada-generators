@@ -98,8 +98,11 @@ package body Coroutines is
    --  finalization.
 
    procedure Reraise_And_Clean (Exc : in out Exception_Occurrence);
+   --  Re-raise Exc while leaving Exc as a null occurrence
 
    procedure Reset (C : in out Coroutine);
+   --  Assuming that C is not running anymore, free associated resources and
+   --  reset flags.
 
    -----------
    -- Reset --
