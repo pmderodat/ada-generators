@@ -40,6 +40,7 @@ package body Generators is
             I.State := Returning;
             raise;
       end;
+      I.State := Returning;
    end Run;
 
    --------------
