@@ -16,33 +16,42 @@ package Coroutines is
    type Coroutine is abstract tagged limited private;
    type Coroutine_Access is access all Coroutine'Class;
 
+   Coroutine_Error : exception;
+
+   function Alive (C : in out Coroutine) return Boolean;
+   --  Return whether C is running (i.e. when it is spawned).
+
    procedure Spawn
      (C          : in out Coroutine;
       Stack_Size : System.Storage_Elements.Storage_Offset := 2**16);
    --  Spawn a coroutine and initialize it to call Callee. Note that the Switch
    --  primivite has to be invoked so that the execution actually starts. In
    --  order to re-spawn a coroutine, kill it first.
+   --
+   --  Spawning a coroutine that is already alive is invalid and raises a
+   --  Coroutine_Error.
 
    procedure Switch (C : in out Coroutine);
-   --  Switch execution from current coroutine to C.
-
-   function Alive (C : in out Coroutine) return Boolean;
-   --  Return whether C is running (thus return False when killed)
+   --  Switch execution from current coroutine to C. Trying to switch to a dead
+   --  coroutine or to the coroutine currently running is invalid and raises a
+   --  Coroutine_Error.
 
    procedure Kill (C : in out Coroutine);
-   --  Kill C. An exception is raised in it, then it is cleaned. The main
-   --  coroutine cannot be killed, and it is invalid to kill a coroutine
-   --  twice in a row.
+   --  Kill C. An exception is raised in it, then it is cleaned. Trying to
+   --  kill the main coroutine or a dead coroutine is invalid and raises a
+   --  Coroutine_Error.
 
    procedure Run (C : in out Coroutine) is abstract;
-   --  User code to run inside a coroutine
+   --  User code to run inside a coroutine. When it completes, the coroutine
+   --  becomes dead and the execution resumes... somewhere TODO???
 
    function Current_Coroutine return Coroutine_Access;
    --  Return a reference to the coroutine that is currently running
 
    function Main_Coroutine return Coroutine_Access;
    --  Return a reference to the coroutine that was started automatically at
-   --  the beginning of the process.
+   --  the beginning of the process. Trying to kill it is invalid and raises
+   --  a Coroutine_Error.
 
 private
 

@@ -109,6 +109,15 @@ package body Coroutines is
    end Finalize;
 
    -----------
+   -- Alive --
+   -----------
+
+   function Alive (C : in out Coroutine) return Boolean is
+   begin
+      return C.Data /= Null_Address;
+   end Alive;
+
+   -----------
    -- Spawn --
    -----------
 
@@ -130,7 +139,7 @@ package body Coroutines is
       Coro : PCL.Coroutine;
    begin
       if C.Alive then
-         raise Program_Error with "Coroutine already running";
+         raise Coroutine_Error with "Coroutine already spawed";
       end if;
 
       Coro := Create
@@ -155,9 +164,9 @@ package body Coroutines is
    procedure Switch (C : in out Coroutine) is
    begin
       if C.Data = Current_Coroutine.Data then
-         raise Program_Error with "Trying to switch in the same coroutine";
+         raise Coroutine_Error with "Trying to switch to the same coroutine";
       elsif not C.Alive then
-         raise Program_Error with "Trying to switch to a dead coroutine";
+         raise Coroutine_Error with "Trying to switch to a dead coroutine";
       end if;
 
       --  From the next coroutine to run's point of view, the current coroutine
@@ -179,15 +188,6 @@ package body Coroutines is
       end if;
    end Switch;
 
-   -----------
-   -- Alive --
-   -----------
-
-   function Alive (C : in out Coroutine) return Boolean is
-   begin
-      return C.Data /= Null_Address;
-   end Alive;
-
    ----------
    -- Kill --
    ----------
@@ -195,10 +195,10 @@ package body Coroutines is
    procedure Kill (C : in out Coroutine) is
    begin
       if C = Main_Coroutine.all then
-         raise Program_Error with "Cannot kill the main coroutine";
+         raise Coroutine_Error with "Cannot kill the main coroutine";
 
       elsif not C.Alive then
-         raise Program_Error with "Coroutine already killed";
+         raise Coroutine_Error with "Coroutine already killed";
       end if;
 
       if not C.Is_Started then
