@@ -1,0 +1,5 @@
+Main: about to spawn A
+Coroutine A: started, about to spawn B
+Coroutine B: started, about to terminate
+Coroutine A: about to terminate
+Main: about to terminate

@@ -1,0 +1,25 @@
+with "coroutines.gpr";
+
+project Tests is
+   for Languages use ("Ada");
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+   for Exec_Dir use "exe";
+   for Main use
+     ("test_empty.adb",
+
+      "test_kill_twice.adb",
+      "test_kill_main.adb",
+
+      "test_spawn_twice.adb",
+      "test_spawn_exit.adb",
+      "test_spawn_kill.adb",
+      "test_spawn_switch_exit.adb",
+      "test_spawn_switch_kill.adb",
+
+      "test_switch_dead.adb",
+      "test_switch_self.adb",
+
+      "test_resume_simple.adb",
+      "test_resume_chained.adb");
+end Tests;
