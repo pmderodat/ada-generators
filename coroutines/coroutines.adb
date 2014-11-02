@@ -18,45 +18,30 @@ package body Coroutines is
    function Convert is new Ada.Unchecked_Conversion
      (PCL.Coroutine, System.Address);
 
-   package Conversions is new  System.Address_To_Access_Conversions
-     (Coroutine'Class);
+   package Conversions is new System.Address_To_Access_Conversions
+     (Coroutine_Internal);
+
+   function Get_Coroutine (C : Coroutine_Internal_Access) return Coroutine;
 
    --------------------
    -- Main coroutine --
    --------------------
 
-   type Main_Coroutine_Type is new Coroutine with null record;
-
-   procedure Run (C : in out Main_Coroutine_Type);
-   --  The main coroutine... is never started the usual way: it is the
-   --  "regular" coroutine. Thus, this Run method will never be used.
-
-   ---------
-   -- Run --
-   ---------
-
-   procedure Run (C : in out Main_Coroutine_Type) is
-   begin
-      --  This is not supposed to be run: see the above comment
-
-      raise Program_Error;
-   end Run;
-
-   Main_Coroutine_Obj : aliased Main_Coroutine_Type :=
+   Main_Coroutine_Internal : aliased Coroutine_Internal :=
      (Ada.Finalization.Limited_Controlled with
+      D          => null,
+      Ref_Count  => 1,
       Data       => Convert (PCL.Current),
       Is_Main    => True,
       Is_Started => True,
       To_Clean   => False,
       Exc        => <>);
-   Previous_Coroutine_Ptr : Coroutine_Access := Main_Coroutine_Obj'Access;
+   Previous_Coroutine : Coroutine_Internal_Access :=
+     Main_Coroutine_Internal'Access;
 
    Abort_Coroutine : exception;
    --  Users should not be able to stop coroutine abortion. Use
    --  Standard'Abort_Signal instead???
-
-   function "=" (Left, Right : Coroutine'Class) return Boolean is
-     (Left'Address = Right'Address);
 
    procedure Coroutine_Wrapper (Data : System.Address)
      with Convention => C;
@@ -66,15 +51,141 @@ package body Coroutines is
    procedure Reraise_And_Clean (Exc : in out Exception_Occurrence);
    --  Re-raise Exc while leaving Exc as a null occurrence
 
-   procedure Reset (C : in out Coroutine);
+   procedure Reset (C : in out Coroutine_Internal);
    --  Assuming that C is not running anymore, free associated resources and
    --  reset flags.
+
+   function Current_Coroutine_Internal return Coroutine_Internal_Access;
+
+   -------------------
+   -- Get_Coroutine --
+   -------------------
+
+   function Get_Coroutine (C : Coroutine_Internal_Access) return Coroutine is
+   begin
+      C.Ref_Count := C.Ref_Count + 1;
+      return (Ada.Finalization.Controlled with
+                Coroutine => C);
+   end Get_Coroutine;
+
+   --------------------------------
+   -- Current_Coroutine_Internal --
+   --------------------------------
+
+   function Current_Coroutine_Internal return Coroutine_Internal_Access is
+      Current_Coroutine : constant PCL.Coroutine := Current;
+      function Convert is new Ada.Unchecked_Conversion
+        (System.Address, Coroutine_Internal_Access);
+   begin
+      if Current_Coroutine = Convert (Main_Coroutine_Internal.Data) then
+         return Main_Coroutine_Internal'Access;
+      else
+         return Convert (Get_Data (Current_Coroutine));
+      end if;
+   end Current_Coroutine_Internal;
+
+   ---------
+   -- "=" --
+   ---------
+
+   function "=" (Left, Right : Coroutine) return Boolean is
+   begin
+      return Left.Coroutine = Right.Coroutine;
+   end "=";
+
+   ----------------
+   -- Initialize --
+   ----------------
+
+   overriding procedure Initialize (C : in out Coroutine) is
+   begin
+      C.Coroutine := null;
+   end Initialize;
+
+   ------------
+   -- Adjust --
+   ------------
+
+   overriding procedure Adjust (C : in out Coroutine) is
+   begin
+      if C.Coroutine /= null then
+         C.Coroutine.Ref_Count := C.Coroutine.Ref_Count + 1;
+      end if;
+   end Adjust;
+
+   --------------
+   -- Finalize --
+   --------------
+
+   overriding procedure Finalize (C : in out Coroutine) is
+      procedure Free is new Ada.Unchecked_Deallocation
+        (Coroutine_Internal, Coroutine_Internal_Access);
+   begin
+      if C.Coroutine = null then
+         return;
+      end if;
+
+      C.Coroutine.Ref_Count := C.Coroutine.Ref_Count - 1;
+      if C.Coroutine /= Main_Coroutine_Internal'Access
+         and then C.Coroutine.Ref_Count = 0
+      then
+         Free (C.Coroutine);
+      end if;
+   end Finalize;
+
+   ------------
+   -- Create --
+   ------------
+
+   function Create (D : Delegate_Access) return Coroutine is
+      pragma Assert (D /= null);
+   begin
+      return Get_Coroutine (new Coroutine_Internal (D));
+   end Create;
+
+   -----------
+   -- Alive --
+   -----------
+
+   function Alive (C : Coroutine) return Boolean is
+   begin
+      return C.Coroutine.Alive;
+   end Alive;
+
+   -----------
+   -- Spawn --
+   -----------
+
+   procedure Spawn
+     (C          : Coroutine;
+      Stack_Size : System.Storage_Elements.Storage_Offset := 2**16) is
+   begin
+      C.Coroutine.Spawn;
+   end Spawn;
+
+   ------------
+   -- Switch --
+   ------------
+
+   procedure Switch (C : Coroutine) is
+   begin
+      C.Coroutine.Switch;
+   end Switch;
+
+   ----------
+   -- Kill --
+   ----------
+
+   procedure Kill (C : Coroutine) is
+   begin
+      C.Coroutine.Kill;
+   end Kill;
 
    -----------
    -- Reset --
    -----------
 
-   procedure Reset (C : in out Coroutine) is
+   procedure Reset (C : in out Coroutine_Internal) is
    begin
       if C.Data /= Null_Address then
          Delete (Convert (C.Data));
@@ -88,8 +199,9 @@ package body Coroutines is
    -- Initialize --
    ----------------
 
-   procedure Initialize (C : in out Coroutine) is
+   procedure Initialize (C : in out Coroutine_Internal) is
    begin
+      C.Ref_Count := 0;
       C.Data := Null_Address;
       C.Is_Main := False;
       C.To_Clean := False;
@@ -101,10 +213,17 @@ package body Coroutines is
    -- Finalize --
    --------------
 
-   procedure Finalize (C : in out Coroutine) is
+   procedure Finalize (C : in out Coroutine_Internal) is
+      subtype Delegate_Class_Wide is Delegate'Class;
+      procedure Free is new Ada.Unchecked_Deallocation
+        (Delegate_Class_Wide, Delegate_Access);
+      D : Delegate_Access := C.D;
    begin
-      if C /= Main_Coroutine.all and then C.Data /= Null_Address then
-         C.Kill;
+      if not C.Is_Main then
+         if C.Alive then
+            C.Kill;
+         end if;
+         Free (D);
       end if;
    end Finalize;
 
@@ -112,7 +231,7 @@ package body Coroutines is
    -- Alive --
    -----------
 
-   function Alive (C : in out Coroutine) return Boolean is
+   function Alive (C : in out Coroutine_Internal) return Boolean is
    begin
       return C.Data /= Null_Address;
    end Alive;
@@ -122,7 +241,7 @@ package body Coroutines is
    -----------
 
    procedure Spawn
-     (C          : in out Coroutine;
+     (C          : in out Coroutine_Internal;
       Stack_Size : System.Storage_Elements.Storage_Offset := 2**16)
    is
       procedure Discard (A : System.Address);
@@ -147,7 +266,7 @@ package body Coroutines is
          Data  => C'Address,
          Stack => Null_Address,
          Size  => Integer (Stack_Size));
-      if Coro = Null_Coroutine then
+      if Coro = PCL.Null_Coroutine then
          --  TODO: check errno, etc.
          raise Program_Error with "PCL.Create failed";
       end if;
@@ -161,9 +280,9 @@ package body Coroutines is
    -- Switch --
    ------------
 
-   procedure Switch (C : in out Coroutine) is
+   procedure Switch (C : in out Coroutine_Internal) is
    begin
-      if C.Data = Current_Coroutine.Data then
+      if C.Data = Convert (Current) then
          raise Coroutine_Error with "Trying to switch to the same coroutine";
       elsif not C.Alive then
          raise Coroutine_Error with "Trying to switch to a dead coroutine";
@@ -172,19 +291,19 @@ package body Coroutines is
       --  From the next coroutine to run's point of view, the current coroutine
       --  is what Previous_Coroutine_Ptr shall be.
 
-      Previous_Coroutine_Ptr := Current_Coroutine;
+      Previous_Coroutine := Current_Coroutine_Internal;
       Call (Convert (C.Data));
 
-      if Previous_Coroutine_Ptr.To_Clean then
-         Reset (C);
-         if not Is_Null_Occurrence (Previous_Coroutine_Ptr.Exc) then
+      if Previous_Coroutine.To_Clean then
+         Reset (Previous_Coroutine.all);
+         if not Is_Null_Occurrence (Previous_Coroutine.Exc) then
             pragma Assert (Is_Null_Occurrence (C.Exc));
-            Reraise_And_Clean (Previous_Coroutine_Ptr.Exc);
+            Reraise_And_Clean (Previous_Coroutine.Exc);
          end if;
       end if;
 
-      if not Is_Null_Occurrence (Current_Coroutine.Exc) then
-         Reraise_And_Clean (Current_Coroutine.Exc);
+      if not Is_Null_Occurrence (Current_Coroutine_Internal.Exc) then
+         Reraise_And_Clean (Current_Coroutine_Internal.Exc);
       end if;
    end Switch;
 
@@ -192,9 +311,9 @@ package body Coroutines is
    -- Kill --
    ----------
 
-   procedure Kill (C : in out Coroutine) is
+   procedure Kill (C : in out Coroutine_Internal) is
    begin
-      if C = Main_Coroutine.all then
+      if C'Unrestricted_Access = Main_Coroutine.Coroutine then
          raise Coroutine_Error with "Cannot kill the main coroutine";
 
       elsif not C.Alive then
@@ -227,25 +346,18 @@ package body Coroutines is
    -- Current_Coroutine --
    -----------------------
 
-   function Current_Coroutine return Coroutine_Access is
-      Current_Coroutine : constant PCL.Coroutine := Current;
-      function Convert is new Ada.Unchecked_Conversion
-        (System.Address, Coroutine_Access);
+   function Current_Coroutine return Coroutine is
    begin
-      if Current_Coroutine = Convert (Main_Coroutine_Obj.Data) then
-         return Main_Coroutine_Obj'Access;
-      else
-         return Convert (Get_Data (Current_Coroutine));
-      end if;
+      return Get_Coroutine (Current_Coroutine_Internal);
    end Current_Coroutine;
 
    --------------------
    -- Main_Coroutine --
    --------------------
 
-   function Main_Coroutine return Coroutine_Access is
+   function Main_Coroutine return Coroutine is
    begin
-      return Main_Coroutine_Obj'Access;
+      return Get_Coroutine (Main_Coroutine_Internal'Access);
    end Main_Coroutine;
 
    -----------------------
@@ -253,9 +365,9 @@ package body Coroutines is
    -----------------------
 
    procedure Coroutine_Wrapper (Data : System.Address) is
-      package Conversions is new  System.Address_To_Access_Conversions
-        (Coroutine'Class);
-      C : access Coroutine'Class := Conversions.To_Pointer (Data);
+      package Conversions is new System.Address_To_Access_Conversions
+        (Coroutine_Internal);
+      C : access Coroutine_Internal := Conversions.To_Pointer (Data);
       Switch_To_Previous : Boolean := False;
 
    begin
@@ -265,7 +377,7 @@ package body Coroutines is
       --  coroutine we will be switching to must clean this coroutine.
 
       begin
-         C.Run;
+         C.D.Run;
       exception
          when Abort_Coroutine =>
             Switch_To_Previous := True;
@@ -277,9 +389,9 @@ package body Coroutines is
 
       C.To_Clean := True;
       if Switch_To_Previous then
-         Previous_Coroutine_Ptr.Switch;
+         Previous_Coroutine.Switch;
       else
-         Main_Coroutine.Switch;
+         Main_Coroutine_Internal.Switch;
       end if;
    end Coroutine_Wrapper;
 

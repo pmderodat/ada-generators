@@ -1,16 +1,16 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 
-with Coroutines;
+with Coroutines; use Coroutines;
 with Support; use Support;
 
 --  Test where the completion of a coroutine resumes execution to
 
 procedure Test_Resume_Simple is
-   C : Hello_World_Coroutine :=
-     (Coroutines.Coroutine with
-      Caller     => Coroutines.Current_Coroutine,
-      Iterations => 1);
+   C : Coroutine :=
+     Create (new Hello_World_Delegate'
+               (Caller     => Coroutines.Current_Coroutine,
+                Iterations => 1));
 begin
    C.Spawn;
    Put_Line ("Main: before switch 1");

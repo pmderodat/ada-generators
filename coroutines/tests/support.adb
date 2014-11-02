@@ -6,7 +6,7 @@ package body Support is
    -- Run --
    ---------
 
-   overriding procedure Run (C : in out Null_Coroutine) is
+   overriding procedure Run (D : in out Null_Delegate) is
    begin
       null;
    end Run;
@@ -15,11 +15,11 @@ package body Support is
    -- Run --
    ---------
 
-   overriding procedure Run (C : in out Hello_World_Coroutine) is
+   overriding procedure Run (D : in out Hello_World_Delegate) is
    begin
-      for I in 1 .. C.Iterations loop
+      for I in 1 .. D.Iterations loop
          Put_Line ("Hello, world!");
-         C.Caller.Switch;
+         D.Caller.Switch;
       end loop;
       Put_Line ("Last Hello, world!");
    end Run;

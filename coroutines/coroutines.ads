@@ -10,19 +10,47 @@ package Coroutines is
    --  This package provides support for creating coroutines.
 
    --  Coroutines are lightweight user-land cooperative threads. This package
-   --  provides an abstract tagged type: in order to create coroutines, one has
-   --  to derive it providing a target procedure as a Run primitive.
+   --  provides a type to hold ref-counted coroutines and an interface to
+   --  implement the actual subprogram running under a coroutine.
 
-   type Coroutine is abstract tagged limited private;
-   type Coroutine_Access is access all Coroutine'Class;
+   type Coroutine is tagged private;
+   --  Ref-counted coroutine. Use the Create constructor before using it, or
+   --  assign another initialized coroutine to it. Unless explicitely stated,
+   --  all primitives expect a coroutine to be initialized and will raise a
+   --  Constraint_Error if provided uninitialized ones.
+
+   Null_Coroutine : constant Coroutine;
+   --  Uninitialized coroutine
+
+   type Delegate is interface;
+   procedure Run (D : in out Delegate) is abstract;
+   --  User code to run inside a coroutine. When it completes, the coroutine
+   --  becomes dead and the execution resumes to its nearest alive parent.
+   --  If it aborts with an exception, the coroutine becomes dead too and
+   --  the exception is re-raised in its closest alive parent.
+
+   type Delegate_Access is access all Delegate'Class;
 
    Coroutine_Error : exception;
+   --  Exception raised by coroutine primitives in erroneous cases. Refer to
+   --  primitives specifications to learn about these cases.
 
-   function Alive (C : in out Coroutine) return Boolean;
-   --  Return whether C is running (i.e. when it is spawned).
+   function Create (D : Delegate_Access) return Coroutine;
+   --  Create and return a new coroutine that will run the D delegate. The
+   --  ownership of D is transfered to the coroutine: it will be free'd
+   --  when nobody refers to the coroutine anymore. The created coroutine is
+   --  associated to the coroutine in which Created is invoked (i.e. this will
+   --  be its parent coroutine). In order to actually start the coroutine, use
+   --  the Spawn and Switch primitives.
+
+   function "=" (Left, Right : Coroutine) return Boolean;
+   --  Return whether Left and Right reference the same coroutine
+
+   function Alive (C : Coroutine) return Boolean;
+   --  Return whether C is running (i.e. when it is spawned)
 
    procedure Spawn
-     (C          : in out Coroutine;
+     (C          : Coroutine;
       Stack_Size : System.Storage_Elements.Storage_Offset := 2**16);
    --  Spawn a coroutine and initialize it to call Callee. Note that the Switch
    --  primivite has to be invoked so that the execution actually starts. In
@@ -31,32 +59,32 @@ package Coroutines is
    --  Spawning a coroutine that is already alive is invalid and raises a
    --  Coroutine_Error.
 
-   procedure Switch (C : in out Coroutine);
+   procedure Switch (C : Coroutine);
    --  Switch execution from current coroutine to C. Trying to switch to a dead
    --  coroutine or to the coroutine currently running is invalid and raises a
    --  Coroutine_Error.
 
-   procedure Kill (C : in out Coroutine);
+   procedure Kill (C : Coroutine);
    --  Kill C. An exception is raised in it, then it is cleaned. Trying to
    --  kill the main coroutine or a dead coroutine is invalid and raises a
    --  Coroutine_Error.
 
-   procedure Run (C : in out Coroutine) is abstract;
-   --  User code to run inside a coroutine. When it completes, the coroutine
-   --  becomes dead and the execution resumes... somewhere TODO???
-
-   function Current_Coroutine return Coroutine_Access;
+   function Current_Coroutine return Coroutine;
    --  Return a reference to the coroutine that is currently running
 
-   function Main_Coroutine return Coroutine_Access;
+   function Main_Coroutine return Coroutine;
    --  Return a reference to the coroutine that was started automatically at
    --  the beginning of the process. Trying to kill it is invalid and raises
    --  a Coroutine_Error.
 
 private
 
-   type Coroutine is abstract new Ada.Finalization.Limited_Controlled
-     with record
+   type Coroutine_Internal (D : access Delegate'Class) is
+     new Ada.Finalization.Limited_Controlled with record
+      Ref_Count  : Natural;
+      --  Number of references to this coroutine. Once it reaches 0, the
+      --  coroutinen can be free'd.
+
       Data       : System.Address;
       --  Coroutines back-end specific data
 
@@ -79,9 +107,30 @@ private
       --  When assigned a non-null exception occurrence, the Switch primitive
       --  must re-raise it when resuming excution.
    end record;
+   --  Actual coroutine referenced by Coroutine values
+
+   overriding procedure Initialize (C : in out Coroutine_Internal);
+   overriding procedure Finalize (C : in out Coroutine_Internal);
+
+   function Alive (C : in out Coroutine_Internal) return Boolean;
+   procedure Spawn
+     (C          : in out Coroutine_Internal;
+      Stack_Size : System.Storage_Elements.Storage_Offset := 2**16);
+   procedure Switch (C : in out Coroutine_Internal);
+   procedure Kill (C : in out Coroutine_Internal);
+   --  Underlying implementations of the Coroutine primitives
+
+   type Coroutine_Internal_Access is access all Coroutine_Internal;
+
+   type Coroutine is new Ada.Finalization.Controlled with record
+      Coroutine : Coroutine_Internal_Access;
+   end record;
 
    overriding procedure Initialize (C : in out Coroutine);
+   overriding procedure Adjust (C : in out Coroutine);
    overriding procedure Finalize (C : in out Coroutine);
-   --  These two get automatically called thanks to controlled objects
+
+   Null_Coroutine : constant Coroutine :=
+     (Ada.Finalization.Controlled with others => <>);
 
 end Coroutines;
