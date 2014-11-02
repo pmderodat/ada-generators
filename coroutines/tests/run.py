@@ -17,6 +17,8 @@ TESTS = (
     SimpleTest('test_kill_main'),
     SimpleTest('test_kill_twice'),
 
+    SimpleTest('test_delegate_nonlocal_ref'),
+
     SimpleTest('test_spawn_twice'),
     SimpleTest('test_spawn_exit'),
     SimpleTest('test_spawn_kill'),
