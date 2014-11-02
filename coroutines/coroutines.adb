@@ -31,6 +31,7 @@ package body Coroutines is
      (Ada.Finalization.Limited_Controlled with
       D          => null,
       Ref_Count  => 1,
+      Parent     => (Ada.Finalization.Controlled with Coroutine => null),
       Data       => Convert (PCL.Current),
       Is_Main    => True,
       Is_Started => True,
@@ -139,8 +140,11 @@ package body Coroutines is
 
    function Create (D : Delegate_Access) return Coroutine is
       pragma Assert (D /= null);
+
+      C_Int : Coroutine_Internal_Access := new Coroutine_Internal (D);
    begin
-      return Get_Coroutine (new Coroutine_Internal (D));
+      C_Int.Parent := Current_Coroutine;
+      return Get_Coroutine (C_Int);
    end Create;
 
    -----------
@@ -202,6 +206,7 @@ package body Coroutines is
    procedure Initialize (C : in out Coroutine_Internal) is
    begin
       C.Ref_Count := 0;
+      C.Parent := (Ada.Finalization.Controlled with Coroutine => null);
       C.Data := Null_Address;
       C.Is_Main := False;
       C.To_Clean := False;
@@ -368,7 +373,6 @@ package body Coroutines is
       package Conversions is new System.Address_To_Access_Conversions
         (Coroutine_Internal);
       C : access Coroutine_Internal := Conversions.To_Pointer (Data);
-      Switch_To_Previous : Boolean := False;
 
    begin
       C.Is_Started := True;
@@ -380,19 +384,25 @@ package body Coroutines is
          C.D.Run;
       exception
          when Abort_Coroutine =>
-            Switch_To_Previous := True;
+            null;
 
          when Exc : others =>
             Save_Occurrence (C.Exc, Exc);
-            Switch_To_Previous := True;
       end;
 
       C.To_Clean := True;
-      if Switch_To_Previous then
-         Previous_Coroutine.Switch;
-      else
-         Main_Coroutine_Internal.Switch;
-      end if;
+
+      --  Get the nearest parent coroutine still alive and resume execution in
+      --  it.
+
+      declare
+         Alive_Parent : Coroutine_Internal_Access := C.Parent.Coroutine;
+      begin
+         while not Alive_Parent.Alive loop
+            Alive_Parent := Alive_Parent.Parent.Coroutine;
+         end loop;
+         Alive_Parent.Switch;
+      end;
    end Coroutine_Wrapper;
 
    -----------------------

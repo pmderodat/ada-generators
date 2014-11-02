@@ -85,6 +85,11 @@ private
       --  Number of references to this coroutine. Once it reaches 0, the
       --  coroutinen can be free'd.
 
+      Parent     : Coroutine;
+      --  Coroutine that created this one. The main coroutine should be the
+      --  greatest parent for all coroutines. Used to resume execution after
+      --  coroutine completion.
+
       Data       : System.Address;
       --  Coroutines back-end specific data
 
