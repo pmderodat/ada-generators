@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import argparse
 import collections
 import os
 import subprocess
@@ -23,12 +24,24 @@ TESTS = (
 )
 
 
-def run_test(args, ref_file):
-    # Run tests under Valgrind
-    base_args = args
-    args = [
-        'valgrind', '-q', '--leak-check=full', '--show-leak-kinds=all',
-    ] + base_args
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-v', '--valgrind', action='store_true',
+    help='Enable memory checks with Valgrind'
+)
+parser.add_argument(
+    'pattern', default=None, nargs='?',
+    help='Specify what tests to run'
+)
+
+
+def run_test(args, base_args, ref_file):
+    if args.valgrind:
+        args = [
+            'valgrind', '-q', '--leak-check=full', '--show-leak-kinds=all',
+        ] + base_args
+    else:
+        args = list(base_args)
 
     with open(ref_file, 'rb') as f:
         ref_bytes = f.read()
@@ -49,22 +62,32 @@ def run_test(args, ref_file):
         print('\x1b[32mOK\x1b[0m:   {}'.format(' '.join(base_args)))
 
 
-for test in TESTS:
-    base_args = [
-        os.path.join('exe', test.name)
-    ]
-    def get_ref_file(test_name, run_name=None):
-        if run_name:
-            test_name = '{}_{}'.format(test_name, run_name)
-        return os.path.join('ref', test_name)
+def main(args):
+    for test in TESTS:
+        if args.pattern and args.pattern not in test.name:
+            continue
 
-    if isinstance(test, SimpleTest):
-        run_test(base_args, get_ref_file(test.name))
-    elif isinstance(test, ParamTest):
-        for run in test.runs:
-            run_test(
-                base_args + run.args,
-                get_ref_file(test.name, run.name)
-            )
-    else:
-        raise ValueError()
+        base_args = [
+            os.path.join('exe', test.name)
+        ]
+        def get_ref_file(test_name, run_name=None):
+            if run_name:
+                test_name = '{}_{}'.format(test_name, run_name)
+            return os.path.join('ref', test_name)
+
+        if isinstance(test, SimpleTest):
+            run_test(args, base_args, get_ref_file(test.name))
+        elif isinstance(test, ParamTest):
+            for run in test.runs:
+                run_test(
+                    args,
+                    base_args + run.args,
+                    get_ref_file(test.name, run.name)
+                )
+        else:
+            raise ValueError()
+
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+    main(args)
