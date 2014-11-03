@@ -4,11 +4,12 @@ package body Support is
    -- Generate --
    --------------
 
-   overriding procedure Generate (C : in out Counter_Infinity) is
-      I : Integer := C.First;
+   overriding procedure Generate (D : in out Counter_Infinity;
+                                  G : Int_Generators.Generator'Class) is
+      I : Integer := D.First;
    begin
       loop
-         C.Yield (I);
+         G.Yield (I);
          I := I + 1;
       end loop;
    end Generate;
@@ -18,11 +19,12 @@ package body Support is
    -- Generate --
    --------------
 
-   overriding procedure Generate (C : in out Counter_Finite) is
+   overriding procedure Generate (D : in out Counter_Finite;
+                                  G : Int_Generators.Generator'Class) is
       I : Integer := 1;
    begin
-      while I <= C.Last loop
-         C.Yield (I);
+      while I <= D.Last loop
+         G.Yield (I);
          I := I + 1;
       end loop;
    end Generate;

@@ -5,9 +5,10 @@ with Support; use Support;
 --  Test performing only one iteration on a generator
 
 procedure Test_Once_Kill is
-   C : Counter_Infinity;
+   G : Int_Generators.Generator :=
+     Int_Generators.Create (new Counter_Infinity);
 begin
-   for I of Int_Generators.Iterable (C) loop
+   for I of G loop
       Put_Line ("Iteration" & Integer'Image (I));
       exit when I = 0;
    end loop;

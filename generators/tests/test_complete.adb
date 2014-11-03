@@ -7,11 +7,12 @@ with Support; use Support;
 --  times.
 
 procedure Test_Complete is
-   C : Counter_Finite :=
-     (Int_Generators.Generator with
-      Last => Natural'Value (Ada.Command_Line.Argument (1)));
+   Last : constant Integer :=
+     Natural'Value (Ada.Command_Line.Argument (1));
+   G : Int_Generators.Generator :=
+     Int_Generators.Create (new Counter_Finite'(Last => Last));
 begin
-   for I of Int_Generators.Iterable (C) loop
+   for I of G loop
       Put_Line ("Iteration" & Integer'Image (I));
    end loop;
 end Test_Complete;
