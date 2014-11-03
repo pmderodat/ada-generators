@@ -1,0 +1,7 @@
+Main: switching to parent coroutine
+Parent: switching to child coroutine
+Child: switching back to parent coroutine
+Parent: about to terminate
+Main: switching to child coroutine
+Child: about to terminate
+Main: about to terminate

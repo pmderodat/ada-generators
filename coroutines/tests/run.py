@@ -30,6 +30,7 @@ TESTS = (
 
     SimpleTest('test_resume_simple'),
     SimpleTest('test_resume_chained'),
+    SimpleTest('test_resume_parent_dead'),
 )
 
 

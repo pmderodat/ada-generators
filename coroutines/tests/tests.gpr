@@ -23,5 +23,6 @@ project Tests is
       "test_switch_self.adb",
 
       "test_resume_simple.adb",
-      "test_resume_chained.adb");
+      "test_resume_chained.adb",
+      "test_resume_parent_dead.adb");
 end Tests;
