@@ -117,7 +117,12 @@ package body Coroutines is
       procedure Free is new Ada.Unchecked_Deallocation
         (Coroutine_Internal, Coroutine_Internal_Access);
    begin
-      if C.Coroutine = null then
+      --  There is nothing to do if there is no referenced coroutine. The
+      --  reference count can already be set to zero when finalization of a
+      --  loop of coroutine references occurs: in such case, one caller is
+      --  already finalizing this one, so there is nothing to do.
+
+      if C.Coroutine = null or else C.Coroutine.Ref_Count = 0 then
          return;
       end if;
 
@@ -125,7 +130,18 @@ package body Coroutines is
       if C.Coroutine /= Main_Coroutine_Internal'Access
          and then C.Coroutine.Ref_Count = 0
       then
-         Free (C.Coroutine);
+         --  Disposing the coroutine internal structure may in turn dispose the
+         --  stack of the coroutine... which may be the place where C used to
+         --  lie on! To avoid any issue, get a local access to the internal
+         --  structure first, clear C and only then dispose the structure.
+
+         declare
+            C_Int : Coroutine_Internal_Access;
+         begin
+            C_Int := C.Coroutine;
+            C.Coroutine := null;
+            Free (C_Int);
+         end;
       end if;
    end Finalize;
 
