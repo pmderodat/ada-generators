@@ -110,7 +110,13 @@ package body Generators is
             G_Int.State := Returning;
             raise;
       end;
+
+      --  We do not want to resume to the parent coroutine. We want instead to
+      --  resume to the last coroutine that invoked this generator, so do not
+      --  rely on usual coroutine completion mechanism.
+
       G_Int.State := Returning;
+      G_Int.Caller.Switch;
    end Run;
 
    --------------
@@ -129,7 +135,9 @@ package body Generators is
             return False;
       end case;
 
+      G_Int.Caller := Coroutines.Current_Coroutine;
       G_Int.Coroutine.Switch;
+      G_Int.Caller := Coroutines.Null_Coroutine;
 
       case G_Int.State is
          when Waiting =>
@@ -137,6 +145,12 @@ package body Generators is
          when Yielding =>
             return True;
          when Returning =>
+            --  We do not want to rely on usual coroutine completion mechanism
+            --  (see Run), so kill completed generators as soon as possible.
+
+            if G_Int.Coroutine.Alive then
+               G_Int.Coroutine.Kill;
+            end if;
             return False;
       end case;
    end Has_Next;

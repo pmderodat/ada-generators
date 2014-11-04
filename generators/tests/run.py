@@ -21,6 +21,7 @@ TESTS = (
         TestRun('1', ['1']),
         TestRun('2', ['2']),
     ]),
+    SimpleTest('test_chained'),
 )
 
 

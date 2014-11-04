@@ -110,8 +110,8 @@ private
       --  Coroutine that runs this generator
 
       Caller      : Coroutines.Coroutine;
-      --  Identifies the coroutine that spawned this generator. This enables us
-      --  to switch back to it when yielding a result.
+      --  Just before switching to the generator coroutine, set to reference
+      --  the coroutine it is supposed to switch back to.
 
       State       : State_Type;
       --  Generator execution state. Used to synchronize the generator and its

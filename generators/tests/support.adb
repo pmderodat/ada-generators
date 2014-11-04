@@ -29,4 +29,16 @@ package body Support is
       end loop;
    end Generate;
 
+   --------------
+   -- Generate --
+   --------------
+
+   overriding procedure Generate (D : in out Doubles;
+                                  G : Int_Generators.Generator'Class) is
+   begin
+      for I of D.G loop
+         G.Yield (2 * I);
+      end loop;
+   end Generate;
+
 end Support;

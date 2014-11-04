@@ -10,5 +10,6 @@ project Tests is
       "test_once_kill.adb",
       "test_twice_kill.adb",
       "test_stop_resume.adb",
-      "test_complete.adb");
+      "test_complete.adb",
+      "test_chained.adb");
 end Tests;

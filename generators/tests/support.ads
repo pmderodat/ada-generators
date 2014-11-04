@@ -26,4 +26,12 @@ package Support is
    overriding procedure Generate (D : in out Counter_Finite;
                                   G : Int_Generators.Generator'Class);
 
+   type Doubles is new Int_Generators.Delegate with record
+      G : Int_Generators.Generator;
+   end record;
+   --  Generator that double each item another generator yields
+
+   overriding procedure Generate (D : in out Doubles;
+                                  G : Int_Generators.Generator'Class);
+
 end Support;
