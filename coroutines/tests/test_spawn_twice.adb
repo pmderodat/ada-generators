@@ -7,7 +7,7 @@ with Support; use Support;
 --  Test that spawning twice raises a Coroutine_Error
 
 procedure Test_Spawn_Twice is
-   C : Coroutine := Create (new Null_Delegate);
+   C : constant Coroutine := Create (new Null_Delegate);
 begin
    C.Spawn;
    begin

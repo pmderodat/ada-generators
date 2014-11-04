@@ -49,7 +49,7 @@ package body Generators is
       use type Coroutines.Delegate_Access;
       pragma Assert (D /= null);
 
-      G_Int : Generator_Internal_Access := new Generator_Internal;
+      G_Int : constant Generator_Internal_Access := new Generator_Internal;
    begin
       G_Int.Ref_Count := 1;
       G_Int.Delegate := D;
@@ -96,7 +96,7 @@ package body Generators is
    overriding
    procedure Run (D : in out Generator_Delegate) is
       G_Int : constant Generator_Internal_Access := D.Generator;
-      G     : Generator :=
+      G     : constant Generator :=
         (Ada.Finalization.Controlled with
          Generator => G_Int,
          Weak      => True);
@@ -188,6 +188,7 @@ package body Generators is
    -----------
 
    function First (G : Generator) return Cursor_Type is
+      pragma Unreferenced (G);
    begin
       return (others => <>);
    end First;
@@ -197,6 +198,7 @@ package body Generators is
    ----------
 
    function Next (G : Generator; C : Cursor_Type) return Cursor_Type is
+      pragma Unreferenced (C);
       G_Int : constant Generator_Internal_Access := G.Generator;
    begin
       case G_Int.State is
@@ -216,6 +218,7 @@ package body Generators is
 
    function Has_Element (G : Generator; C : Cursor_Type) return Boolean
    is
+      pragma Unreferenced (C);
    begin
       return G.Has_Next;
    end Has_Element;
@@ -225,6 +228,7 @@ package body Generators is
    -------------
 
    function Element (G : Generator; C : Cursor_Type) return T is
+      pragma Unreferenced (C);
       G_Int : constant Generator_Internal_Access := G.Generator;
    begin
       case G_Int.State is

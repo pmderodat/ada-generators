@@ -1,9 +1,7 @@
 with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Exceptions.Is_Null_Occurrence;
-with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Unchecked_Conversion;
-
-with Interfaces;
+with Ada.Unchecked_Deallocation;
 
 with System; use System;
 with System.Address_To_Access_Conversions;
@@ -17,9 +15,6 @@ package body Coroutines is
 
    function Convert is new Ada.Unchecked_Conversion
      (PCL.Coroutine, System.Address);
-
-   package Conversions is new System.Address_To_Access_Conversions
-     (Coroutine_Internal);
 
    function Get_Coroutine (C : Coroutine_Internal_Access) return Coroutine;
 
@@ -141,7 +136,7 @@ package body Coroutines is
    function Create (D : Delegate_Access) return Coroutine is
       pragma Assert (D /= null);
 
-      C_Int : Coroutine_Internal_Access := new Coroutine_Internal (D);
+      C_Int : constant Coroutine_Internal_Access := new Coroutine_Internal (D);
    begin
       C_Int.Parent := Current_Coroutine;
       return Get_Coroutine (C_Int);
@@ -164,7 +159,7 @@ package body Coroutines is
      (C          : Coroutine;
       Stack_Size : System.Storage_Elements.Storage_Offset := 2**16) is
    begin
-      C.Coroutine.Spawn;
+      C.Coroutine.Spawn (Stack_Size);
    end Spawn;
 
    ------------
@@ -372,7 +367,8 @@ package body Coroutines is
    procedure Coroutine_Wrapper (Data : System.Address) is
       package Conversions is new System.Address_To_Access_Conversions
         (Coroutine_Internal);
-      C           : access Coroutine_Internal := Conversions.To_Pointer (Data);
+      C           : constant access Coroutine_Internal :=
+        Conversions.To_Pointer (Data);
       To_Previous : Boolean := False;
 
    begin

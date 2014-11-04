@@ -138,8 +138,8 @@ private
       Generator : Generator_Internal_Access;
 
       Weak      : Boolean;
-      -- Whether finalization should trigger reference counting and garbage
-      -- collection.
+      --  Whether finalization should trigger reference counting and garbage
+      --  collection.
    end record;
 
    overriding procedure Initialize (G : in out Generator);

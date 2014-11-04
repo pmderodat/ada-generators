@@ -5,9 +5,9 @@ with Support; use Support;
 --  Test creating generators from another generator
 
 procedure Test_Chained is
-   G1 : Int_Generators.Generator :=
+   G1 : constant Int_Generators.Generator :=
      Int_Generators.Create (new Counter_Finite'(Last => 5));
-   G2 : Int_Generators.Generator :=
+   G2 : constant Int_Generators.Generator :=
      Int_Generators.Create (new Doubles'(G => G1));
 begin
    for I of G2 loop

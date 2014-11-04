@@ -10,13 +10,18 @@ procedure Test_Delegate_Nonlocal_Ref is
 
    I : Natural := 0;
 
+   ---------
+   -- Run --
+   ---------
+
    overriding procedure Run (D : in out Local_Delegate) is
+      pragma Unreferenced (D);
    begin
       I := 1;
    end Run;
 
-   D : access Local_Delegate := new Local_Delegate;
-   C : Coroutine := Create (Delegate_Access (D));
+   D : constant access Local_Delegate := new Local_Delegate;
+   C : constant Coroutine := Create (Delegate_Access (D));
 begin
    Put_Line ("Before: I =" & Natural'Image (I));
    C.Spawn;

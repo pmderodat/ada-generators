@@ -2,7 +2,6 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 
 with Coroutines;
-with Support; use Support;
 
 --  Test that switching to a coroutine that is already running raises a
 --  Coroutine_Error.

@@ -5,7 +5,7 @@ with Support; use Support;
 --  Test stopping an iteration on a generator and then resuming it
 
 procedure Test_Stop_Resume is
-   G : Int_Generators.Generator :=
+   G : constant Int_Generators.Generator :=
      Int_Generators.Create (new Counter_Infinity);
 begin
    for I of G loop

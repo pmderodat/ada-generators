@@ -2,7 +2,6 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 
 with Coroutines; use Coroutines;
-with Support; use Support;
 
 --  Test that killing the main coroutine raises a Coroutine_Error
 

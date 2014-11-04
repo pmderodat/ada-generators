@@ -7,7 +7,7 @@ with Support; use Support;
 --  kills it
 
 procedure Test_Spawn_Switch_Kill is
-   C : Coroutine :=
+   C : constant Coroutine :=
      Create (new Hello_World_Delegate'
                (Caller     => Coroutines.Current_Coroutine,
                 Iterations => 3));

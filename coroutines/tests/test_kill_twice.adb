@@ -7,7 +7,7 @@ with Support; use Support;
 --  Test that killing a dead coroutine raises a Coroutine_Error
 
 procedure Test_Kill_Twice is
-   C : Coroutine := Create (new Null_Delegate);
+   C : constant Coroutine := Create (new Null_Delegate);
 begin
    C.Kill;
 exception

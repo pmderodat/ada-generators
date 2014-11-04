@@ -1,5 +1,4 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Exceptions; use Ada.Exceptions;
 
 with Coroutines; use Coroutines;
 with Support; use Support;
@@ -7,7 +6,7 @@ with Support; use Support;
 --  Test where the completion of a coroutine resumes execution to
 
 procedure Test_Resume_Simple is
-   C : Coroutine :=
+   C : constant Coroutine :=
      Create (new Hello_World_Delegate'
                (Caller     => Coroutines.Current_Coroutine,
                 Iterations => 1));

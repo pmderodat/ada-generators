@@ -1,8 +1,6 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Exceptions; use Ada.Exceptions;
 
 with Coroutines; use Coroutines;
-with Support; use Support;
 
 --  Test where the completion of a coroutine resumes execution to in a chained
 --  scenario.
@@ -23,8 +21,9 @@ procedure Test_Resume_Chained is
    ---------
 
    overriding procedure Run (D : in out Delegate_A) is
-      D_B : access Delegate_B := new Delegate_B;
-      C_B : Coroutine := Create (Delegate_Access (D_B));
+      pragma Unreferenced (D);
+      D_B : constant access Delegate_B := new Delegate_B;
+      C_B : constant Coroutine := Create (Delegate_Access (D_B));
    begin
       Put_Line ("Coroutine A: started, about to spawn B");
       C_B.Spawn;
@@ -37,12 +36,13 @@ procedure Test_Resume_Chained is
    ---------
 
    overriding procedure Run (D : in out Delegate_B) is
+      pragma Unreferenced (D);
    begin
       Put_Line ("Coroutine B: started, about to terminate");
    end Run;
 
-   D_A : access Delegate_A := new Delegate_A;
-   C_A : Coroutine := Create (Delegate_Access (D_A));
+   D_A : constant access Delegate_A := new Delegate_A;
+   C_A : constant Coroutine := Create (Delegate_Access (D_A));
 begin
    Put_Line ("Main: about to spawn A");
    C_A.Spawn;

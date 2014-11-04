@@ -9,7 +9,7 @@ with Support; use Support;
 procedure Test_Complete is
    Last : constant Integer :=
      Natural'Value (Ada.Command_Line.Argument (1));
-   G : Int_Generators.Generator :=
+   G : constant Int_Generators.Generator :=
      Int_Generators.Create (new Counter_Finite'(Last => Last));
 begin
    for I of G loop

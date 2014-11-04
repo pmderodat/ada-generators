@@ -5,6 +5,7 @@ with Support; use Support;
 
 procedure Test_Empty is
    C : Coroutine := Create (new Null_Delegate);
+   pragma Unreferenced (C);
 begin
    null;
 end Test_Empty;

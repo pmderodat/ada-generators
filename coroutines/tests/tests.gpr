@@ -26,4 +26,8 @@ project Tests is
       "test_resume_simple.adb",
       "test_resume_chained.adb",
       "test_resume_parent_dead.adb");
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnat12", "-gnatwae", "-gnatyg");
+   end Compiler;
 end Tests;

@@ -25,7 +25,8 @@ procedure Test_Resume_Parent_Dead is
    ---------
 
    overriding procedure Run (D : in out Parent_Delegate) is
-      Child_D : access Child_Delegate := new Child_Delegate;
+      pragma Unreferenced (D);
+      Child_D : constant access Child_Delegate := new Child_Delegate;
    begin
       Child_Coroutine := Create (Delegate_Access (Child_D));
       Child_Coroutine.Spawn;
@@ -41,6 +42,7 @@ procedure Test_Resume_Parent_Dead is
    ---------
 
    overriding procedure Run (D : in out Child_Delegate) is
+      pragma Unreferenced (D);
    begin
       Put_Line ("Child: switching back to parent coroutine");
       Parent_Coroutine.Switch;
@@ -48,7 +50,7 @@ procedure Test_Resume_Parent_Dead is
       Put_Line ("Child: about to terminate");
    end Run;
 
-   D : access Parent_Delegate := new Parent_Delegate;
+   D : constant access Parent_Delegate := new Parent_Delegate;
 
 begin
    Parent_Coroutine := Create (Delegate_Access (D));

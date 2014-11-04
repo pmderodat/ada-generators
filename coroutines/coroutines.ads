@@ -1,6 +1,5 @@
 with Ada.Exceptions;
 with Ada.Finalization;
-with Ada.Unchecked_Deallocation;
 
 with System.Storage_Elements;
 use type System.Storage_Elements.Storage_Offset;

@@ -13,7 +13,14 @@ procedure Test_Foreign_Kill is
    C_Child  : Coroutine;
 
    type Parent_Delegate is new Delegate with null record;
+   overriding procedure Run (D : in out Parent_Delegate);
+
+   ---------
+   -- Run --
+   ---------
+
    overriding procedure Run (D : in out Parent_Delegate) is
+      pragma Unreferenced (D);
    begin
       C_Child := Create (new Hello_World_Delegate'
                            (Caller     => Current_Coroutine,
@@ -28,7 +35,7 @@ procedure Test_Foreign_Kill is
       Put_Line ("Parent: about to terminate");
    end Run;
 
-   D_Parent : access Parent_Delegate := new Parent_Delegate;
+   D_Parent : constant access Parent_Delegate := new Parent_Delegate;
 begin
    C_Parent := Create (Delegate_Access (D_Parent));
    C_Parent.Spawn;

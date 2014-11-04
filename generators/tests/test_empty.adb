@@ -7,6 +7,7 @@ with Support; use Support;
 procedure Test_Empty is
    G : Int_Generators.Generator :=
      Int_Generators.Create (new Counter_Infinity);
+   pragma Unreferenced (G);
 begin
    Put_Line ("Doing nothing");
 end Test_Empty;

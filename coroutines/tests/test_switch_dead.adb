@@ -7,7 +7,7 @@ with Support; use Support;
 --  Test switching to a dead coroutine
 
 procedure Test_Switch_Dead is
-   C : Coroutine := Create (new Null_Delegate);
+   C : constant Coroutine := Create (new Null_Delegate);
 begin
    C.Switch;
 exception
