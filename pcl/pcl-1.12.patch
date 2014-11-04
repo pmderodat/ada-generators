@@ -1,0 +1,70 @@
+diff --git include/pcl_config.h include/pcl_config.h
+index be922c1..404b48a 100644
+--- include/pcl_config.h
++++ include/pcl_config.h
+@@ -77,5 +77,10 @@
+ 
+ #endif
+ 
++/*
++ * Cooperate with Valgrind.
++ */
++#define CO_USE_VALGRIND
++
+ #endif
+ 
+diff --git include/pcl_private.h include/pcl_private.h
+index 949bbee..fc5076a 100644
+--- include/pcl_private.h
++++ include/pcl_private.h
+@@ -47,6 +47,9 @@ typedef jmp_buf co_core_ctx_t;
+ 
+ typedef struct s_co_ctx {
+ 	co_core_ctx_t cc;
++#if defined(CO_USE_VALGRIND)
++	int valgrind_stack_id;
++#endif
+ } co_ctx_t;
+ 
+ typedef struct s_coroutine {
+diff --git pcl/pcl.c pcl/pcl.c
+index 58d8605..a7c3391 100644
+--- pcl/pcl.c
++++ pcl/pcl.c
+@@ -48,6 +48,9 @@ static co_ctx_t ctx_caller;
+ 
+ #endif /* #if defined(CO_USE_SIGCONTEXT) */
+ 
++#if defined(CO_USE_VALGRIND)
++#include <valgrind/valgrind.h>
++#endif
+ 
+ static int co_ctx_sdir(unsigned long psp)
+ {
+@@ -397,7 +400,16 @@ coroutine_t co_create(void (*func)(void *), void *data, void *stack, int size)
+ 	co->alloc = alloc;
+ 	co->func = func;
+ 	co->data = data;
++
++#if defined(CO_USE_VALGRIND)
++	co->ctx.valgrind_stack_id =
++	  VALGRIND_STACK_REGISTER(stack, stack + size - CO_STK_COROSIZE);
++#endif
++
+ 	if (co_set_context(&co->ctx, co_runner, stack, size - CO_STK_COROSIZE) < 0) {
++#if defined(CO_USE_VALGRIND)
++		VALGRIND_STACK_DEREGISTER(co->ctx.valgrind_stack_id);
++#endif
+ 		if (alloc)
+ 			free(co);
+ 		return NULL;
+@@ -416,6 +428,9 @@ void co_delete(coroutine_t coro)
+ 			tctx->co_curr);
+ 		exit(1);
+ 	}
++#if defined(CO_USE_VALGRIND)
++	VALGRIND_STACK_DEREGISTER(co->ctx.valgrind_stack_id);
++#endif
+ 	if (co->alloc)
+ 		free(co);
+ }
