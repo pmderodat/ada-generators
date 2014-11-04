@@ -372,7 +372,8 @@ package body Coroutines is
    procedure Coroutine_Wrapper (Data : System.Address) is
       package Conversions is new System.Address_To_Access_Conversions
         (Coroutine_Internal);
-      C : access Coroutine_Internal := Conversions.To_Pointer (Data);
+      C           : access Coroutine_Internal := Conversions.To_Pointer (Data);
+      To_Previous : Boolean := False;
 
    begin
       C.Is_Started := True;
@@ -384,13 +385,20 @@ package body Coroutines is
          C.D.Run;
       exception
          when Abort_Coroutine =>
-            null;
+            --  The Kill primitive is supposed to resume execution to the
+            --  coroutine that invoked it.
+
+            To_Previous := True;
 
          when Exc : others =>
             Save_Occurrence (C.Exc, Exc);
       end;
 
       C.To_Clean := True;
+
+      if To_Previous then
+         Previous_Coroutine.Switch;
+      end if;
 
       --  Get the nearest parent coroutine still alive and resume execution in
       --  it.

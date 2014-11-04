@@ -10,6 +10,7 @@ project Tests is
 
       "test_kill_twice.adb",
       "test_kill_main.adb",
+      "test_foreign_kill.adb",
 
       "test_delegate_nonlocal_ref.adb",
 

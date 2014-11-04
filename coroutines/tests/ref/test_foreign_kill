@@ -1,0 +1,6 @@
+Main: about to spawn Parent
+Parent: about to switch to Child
+Hello, world!
+Parent: about to switch to Main
+Main: about to kill Child
+Main: about to terminate
