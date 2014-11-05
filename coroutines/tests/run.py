@@ -34,6 +34,7 @@ TESTS = (
     SimpleTest('test_resume_parent_dead'),
 
     SimpleTest('test_reference_loop'),
+    SimpleTest('test_secondary_stack'),
 )
 
 

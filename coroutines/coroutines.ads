@@ -92,6 +92,10 @@ private
       Data       : System.Address;
       --  Coroutines back-end specific data
 
+      Sec_Stack  : System.Address;
+      --  Saved coroutine-specific secondary stack. Allocated (respectively
+      --  free'd) when Is_Started is set to True (respectively False).
+
       Is_Main    : Boolean;
       --  Is this coroutine the main one (i.e. the implicit coroutine started
       --  along with the process).

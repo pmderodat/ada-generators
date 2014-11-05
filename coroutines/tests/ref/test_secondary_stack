@@ -1,0 +1,12 @@
+Main: about to switch to A
+A: Hello !
+A: Switch_Identity called: AAAAAAAAAA
+B: Hello !
+B: Switch_Identity called: BBBBBBBBBB
+A: Switch_Identity resumed: AAAAAAAAAA
+A: AAAAAAAAAA
+A: AAAAAAAAAA
+B: Switch_Identity resumed: BBBBBBBBBB
+B: BBBBBBBBBB
+B: about to terminate
+Main: about to terminate

@@ -6,9 +6,17 @@ with Ada.Unchecked_Deallocation;
 with System; use System;
 with System.Address_To_Access_Conversions;
 
+pragma Warnings (Off);
+with System.Parameters;
+with System.Secondary_Stack;
+with System.Soft_Links;
+pragma Warnings (On);
+
 with PCL; use PCL;
 
 package body Coroutines is
+
+   package SSL renames System.Soft_Links;
 
    function Convert is new Ada.Unchecked_Conversion
      (System.Address, PCL.Coroutine);
@@ -28,6 +36,7 @@ package body Coroutines is
       Ref_Count  => 1,
       Parent     => (Ada.Finalization.Controlled with Coroutine => null),
       Data       => Convert (PCL.Current),
+      Sec_Stack  => Null_Address,
       Is_Main    => True,
       Is_Started => True,
       To_Clean   => False,
@@ -206,6 +215,11 @@ package body Coroutines is
          Delete (Convert (C.Data));
          C.Data := Null_Address;
       end if;
+
+      if C.Sec_Stack /= Null_Address then
+         System.Secondary_Stack.SS_Free (C.Sec_Stack);
+      end if;
+
       C.Is_Started := False;
       C.To_Clean := False;
    end Reset;
@@ -219,6 +233,7 @@ package body Coroutines is
       C.Ref_Count := 0;
       C.Parent := (Ada.Finalization.Controlled with Coroutine => null);
       C.Data := Null_Address;
+      C.Sec_Stack := Null_Address;
       C.Is_Main := False;
       C.To_Clean := False;
       C.Is_Started := False;
@@ -307,8 +322,10 @@ package body Coroutines is
       --  From the next coroutine to run's point of view, the current coroutine
       --  is what Previous_Coroutine_Ptr shall be.
 
+      Current_Coroutine_Internal.Sec_Stack := SSL.Get_Sec_Stack_Addr_Soft;
       Previous_Coroutine := Current_Coroutine_Internal;
       Call (Convert (C.Data));
+      SSL.Set_Sec_Stack_Addr_Soft (Current_Coroutine_Internal.Sec_Stack);
 
       if Previous_Coroutine.To_Clean then
          Reset (Previous_Coroutine.all);
@@ -389,6 +406,25 @@ package body Coroutines is
 
    begin
       C.Is_Started := True;
+
+      pragma Warnings (Off);
+      --  The following condition is expected to be compile-time known. TODO???
+      --  When is it false and why? What should be do exactly?
+
+      if System.Parameters."/="
+        (System.Parameters.Sec_Stack_Percentage,
+         System.Parameters.Dynamic)
+      then
+         pragma Warnings (On);
+         System.Secondary_Stack.SS_Allocate
+           (C.Sec_Stack,
+            System.Storage_Elements.Storage_Count
+              (System.Secondary_Stack.Default_Secondary_Stack_Size));
+      else
+         C.Sec_Stack := Null_Address;
+      end if;
+      System.Secondary_Stack.SS_Init (C.Sec_Stack);
+      SSL.Set_Sec_Stack_Addr_Soft (C.Sec_Stack);
 
       --  When leaving Callee, the coroutine is about to abort, so the
       --  coroutine we will be switching to must clean this coroutine.
