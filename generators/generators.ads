@@ -23,6 +23,10 @@ package Generators is
    --  All primitives expect initialized generators and will raise a
    --  Constraint_Error if provided uninitialized ones.
 
+   Null_Generator : constant Generator;
+
+   function Is_Null (G : Generator) return Boolean;
+
    type Cursor_Type is null record;
    --  Cursor type used in the generator iteration interface. Due to the nature
    --  of generators, cursors do not hold any state: only the generator does.
@@ -145,5 +149,8 @@ private
    overriding procedure Initialize (G : in out Generator);
    overriding procedure Adjust (G : in out Generator);
    overriding procedure Finalize (G : in out Generator);
+
+   Null_Generator : constant Generator :=
+     (Ada.Finalization.Controlled with Generator => null, Weak => False);
 
 end Generators;

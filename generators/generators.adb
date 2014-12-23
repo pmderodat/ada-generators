@@ -2,6 +2,15 @@ with Ada.Unchecked_Deallocation;
 
 package body Generators is
 
+   -------------
+   -- Is_Null --
+   -------------
+
+   function Is_Null (G : Generator) return Boolean is
+   begin
+      return G.Generator = null;
+   end Is_Null;
+
    ----------------
    -- Initialize --
    ----------------
