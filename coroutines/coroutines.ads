@@ -42,7 +42,7 @@ package Coroutines is
    --  be its parent coroutine). In order to actually start the coroutine, use
    --  the Spawn and Switch primitives.
 
-   function "=" (Left, Right : Coroutine) return Boolean;
+   overriding function "=" (Left, Right : Coroutine) return Boolean;
    --  Return whether Left and Right reference the same coroutine
 
    function Alive (C : Coroutine) return Boolean;

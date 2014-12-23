@@ -93,7 +93,7 @@ package body Coroutines is
    -- "=" --
    ---------
 
-   function "=" (Left, Right : Coroutine) return Boolean is
+   overriding function "=" (Left, Right : Coroutine) return Boolean is
    begin
       return Left.Coroutine = Right.Coroutine;
    end "=";
@@ -228,7 +228,7 @@ package body Coroutines is
    -- Initialize --
    ----------------
 
-   procedure Initialize (C : in out Coroutine_Internal) is
+   overriding procedure Initialize (C : in out Coroutine_Internal) is
    begin
       C.Ref_Count := 0;
       C.Parent := (Ada.Finalization.Controlled with Coroutine => null);
@@ -244,7 +244,7 @@ package body Coroutines is
    -- Finalize --
    --------------
 
-   procedure Finalize (C : in out Coroutine_Internal) is
+   overriding procedure Finalize (C : in out Coroutine_Internal) is
       subtype Delegate_Class_Wide is Delegate'Class;
       procedure Free is new Ada.Unchecked_Deallocation
         (Delegate_Class_Wide, Delegate_Access);
