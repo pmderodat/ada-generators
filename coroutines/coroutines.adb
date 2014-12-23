@@ -246,6 +246,7 @@ package body Coroutines is
 
    overriding procedure Finalize (C : in out Coroutine_Internal) is
       subtype Delegate_Class_Wide is Delegate'Class;
+      type Delegate_Access is access all Delegate_Class_Wide;
       procedure Free is new Ada.Unchecked_Deallocation
         (Delegate_Class_Wide, Delegate_Access);
       D : Delegate_Access := C.D;
