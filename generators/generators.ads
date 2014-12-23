@@ -45,10 +45,13 @@ package Generators is
    --  Exception raised by generator primitives in erroneous cases. Refer to
    --  primitives specifications to learn about these cases.
 
-   function Create (D : Delegate_Access) return Generator;
-   --  Create and return a new generator that will run the D delegate. The
-   --  ownership of D is transfered to the generator: it will be free'd when
-   --  nobody refers to the coroutine anymore. Creating a generator starts the
+   function Create (D                  : Delegate_Access;
+                    Transfer_Ownership : Boolean := True) return Generator;
+   --  Create and return a new generator that will run the D delegate. If
+   --  Transfer_Ownership is true, the ownership of D is transfered to the
+   --  generator: it will be free'd when nobody refers to the coroutine
+   --  anymore; otherwise it is up to the caller to make sure D is free'd while
+   --  the coroutine is not running anymore. Creating a generator starts the
    --  generation (i.e. the delegate is started here).
 
    procedure Yield (G : Generator; Value : T);
@@ -109,6 +112,10 @@ private
 
       Delegate    : Delegate_Access;
       --  User delegate, to be run under Generator_Delegate
+
+      Owns_Delegate : Boolean;
+      --  Whether Delegate is owned by this generator. If it's the case, the
+      --  Delegate is free'd when the generator is free'd.
 
       Coroutine   : Coroutines.Coroutine;
       --  Coroutine that runs this generator

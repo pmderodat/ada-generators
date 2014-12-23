@@ -54,7 +54,8 @@ package body Generators is
    -- Create --
    ------------
 
-   function Create (D : Delegate_Access) return Generator is
+   function Create (D                  : Delegate_Access;
+                    Transfer_Ownership : Boolean := True) return Generator is
       use type Coroutines.Delegate_Access;
       pragma Assert (D /= null);
 
@@ -62,6 +63,7 @@ package body Generators is
    begin
       G_Int.Ref_Count := 1;
       G_Int.Delegate := D;
+      G_Int.Owns_Delegate := Transfer_Ownership;
       G_Int.Coroutine :=
         Coroutines.Create (new Generator_Delegate'(Generator => G_Int));
       G_Int.Coroutine.Spawn;
@@ -95,7 +97,9 @@ package body Generators is
       G.Coroutine := Coroutines.Null_Coroutine;
       G.Caller := Coroutines.Null_Coroutine;
       G.State := Returning;
-      Free (G.Delegate);
+      if G.Owns_Delegate then
+         Free (G.Delegate);
+      end if;
    end Finalize;
 
    ---------
