@@ -59,13 +59,16 @@ package body Generators is
       use type Coroutines.Delegate_Access;
       pragma Assert (D /= null);
 
-      G_Int : constant Generator_Internal_Access := new Generator_Internal;
+      G_Int      : constant Generator_Internal_Access :=
+        new Generator_Internal;
+      G_Delegate : constant Generator_Delegate_Access :=
+        new Generator_Delegate'(Generator => G_Int);
    begin
       G_Int.Ref_Count := 1;
       G_Int.Delegate := D;
       G_Int.Owns_Delegate := Transfer_Ownership;
       G_Int.Coroutine :=
-        Coroutines.Create (new Generator_Delegate'(Generator => G_Int));
+        Coroutines.Create (Coroutines.Delegate_Access (G_Delegate));
       G_Int.Coroutine.Spawn;
       return (Ada.Finalization.Controlled with
               Generator => G_Int,

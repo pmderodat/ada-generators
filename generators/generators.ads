@@ -140,6 +140,7 @@ private
    type Generator_Delegate is new Coroutines.Delegate with record
       Generator : Generator_Internal_Access;
    end record;
+   type Generator_Delegate_Access is access all Generator_Delegate;
    --  Delegate that actually implements the generator's coroutine. This is
    --  what invoke the user delegate.
 
