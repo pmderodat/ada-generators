@@ -28,5 +28,10 @@ This is only a prototype so there is no documentation yet! That being said, if
 you want to use this prototype, take a loot at the `coroutines/tests` and
 `generators/tests` subdirectories: in particular all the `.adb` source files.
 
-If you want to run the testsuite, just execute the `run.py` scripts: the
-testsuite results will be displayed on the standard output.
+If you want to run the testsuite, go to the `test` directory and then build the
+testcases:
+
+    $ gprbuild -Ptests
+
+Then, execute the `run.py` scripts: the testsuite results will be displayed on
+The standard output.
