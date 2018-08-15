@@ -247,9 +247,17 @@ package body Generators is
       G_Int : constant Generator_Internal_Access := G.Generator;
    begin
       case G_Int.State is
-         when Waiting | Returning =>
+         when Returning =>
             raise Program_Error with "Unreachable state";
-         when Yielding =>
+
+         when Waiting | Yielding =>
+
+            --  Switch to Waiting state so that we don't require a call to Next
+            --  in order to go to the next element. This is useful to resume
+            --  iteration with a FOR loop.
+
+            G_Int.State := Waiting;
+
             return G_Int.Yield_Value;
       end case;
    end Element;
