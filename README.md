@@ -4,12 +4,12 @@ Ada 2020 - Generators/Coroutines prototype
 This repository hosts a prototype for generators/coroutines support in Ada.
 This prototype includes:
 
-    * a thin Ada binding to PCL (Portable Coroutine Library): see the
-      `pcl` directory.
-    * a wrapper around it to integrate nicely with the GNAT runtime: see the
-      `coroutine` directory.
-    * a library leveraging this to provide generators capabilities: see the
-      `generators` directory.
+* a thin Ada binding to PCL (Portable Coroutine Library): see the `pcl`
+  directory.
+* a wrapper around it to integrate nicely with the GNAT runtime: see the
+  `coroutine` directory.
+* a library leveraging this to provide generators capabilities: see the
+  `generators` directory.
 
 Requirements
 ------------
@@ -31,7 +31,9 @@ you want to use this prototype, take a loot at the `coroutines/tests` and
 If you want to run the testsuite, go to the `test` directory and then build the
 testcases:
 
-    $ gprbuild -Ptests
+```sh
+$ gprbuild -Ptests
+```
 
 Then, execute the `run.py` scripts: the testsuite results will be displayed on
 The standard output.
