@@ -56,7 +56,6 @@ package body Generators is
 
    function Create (D                  : Delegate_Access;
                     Transfer_Ownership : Boolean := True) return Generator is
-      use type Coroutines.Delegate_Access;
       pragma Assert (D /= null);
 
       G_Int      : constant Generator_Internal_Access :=
@@ -206,7 +205,7 @@ package body Generators is
    function First (G : Generator) return Cursor_Type is
       pragma Unreferenced (G);
    begin
-      return (others => <>);
+      return (null record);
    end First;
 
    ----------

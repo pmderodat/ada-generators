@@ -4,6 +4,10 @@ with Ada.Finalization;
 with System.Storage_Elements;
 use type System.Storage_Elements.Storage_Offset;
 
+pragma Warnings (Off);
+private with System.Secondary_Stack;
+pragma Warnings (On);
+
 package Coroutines is
 
    --  This package provides support for creating coroutines.
@@ -92,7 +96,7 @@ private
       Data       : System.Address;
       --  Coroutines back-end specific data
 
-      Sec_Stack  : System.Address;
+      Sec_Stack  : System.Secondary_Stack.SS_Stack_Ptr;
       --  Saved coroutine-specific secondary stack. Allocated (respectively
       --  free'd) when Is_Started is set to True (respectively False).
 
