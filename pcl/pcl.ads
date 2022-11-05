@@ -1,3 +1,6 @@
+--  Copyright (C) 2014-2022, Pierre-Marie de Rodat
+--  SPDX-License-Identifier: Apache-2.0
+
 --  Thin binding for PCL (Portable Coroutine Library)
 
 with Ada.Unchecked_Conversion;

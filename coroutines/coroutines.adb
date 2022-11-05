@@ -1,3 +1,6 @@
+--  Copyright (C) 2014-2022, Pierre-Marie de Rodat
+--  SPDX-License-Identifier: Apache-2.0
+
 with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Exceptions.Is_Null_Occurrence;
 with Ada.Unchecked_Conversion;
